@@ -32,7 +32,6 @@ import {
   prevRoundView,
   revealAnswer,
   revealRemainingAnswer,
-  startGame,
   switchActiveTeam,
   undoAction,
 } from '@/lib/game-engine'
@@ -76,14 +75,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isReady || !gameState || gameState.gameStarted) return
-    if (sessionStorage.getItem('fam-feud-importing')) return
-
-    const timer = window.setTimeout(() => {
-      setGameStateLocal(startGame(gameState))
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [isReady, gameState, setGameStateLocal])
+    router.replace('/questions')
+  }, [isReady, gameState, router])
 
   const validateAndImport = (data: ImportData) => {
     const validationError = validateImportData(data)
@@ -95,29 +88,25 @@ export default function AdminPage() {
     return true
   }
 
-  const completeImport = (rounds: Round[]) => {
-    sessionStorage.setItem('fam-feud-importing', '1')
-    updateState(createInitialState(rounds))
-    setJsonInput('')
-    router.push('/questions')
-  }
+  const completeImport = useCallback(
+    (rounds: Round[]) => {
+      updateState(createInitialState(rounds))
+      setJsonInput('')
+      router.push('/questions')
+    },
+    [router, updateState],
+  )
 
   const handleImport = useCallback(() => {
     try {
       const data: ImportData = JSON.parse(jsonInput)
-      const validationError = validateImportData(data)
-      if (validationError) {
-        setError(validationError)
-        return
+      if (validateAndImport(data)) {
+        completeImport(data.rounds)
       }
-      setError('')
-      updateState(createInitialState(data.rounds))
-      setJsonInput('')
-      router.push('/questions')
     } catch {
       setError('Invalid JSON. Please check the format.')
     }
-  }, [jsonInput, router, updateState])
+  }, [completeImport, jsonInput])
 
   const handleFileImport = (file: File) => {
     const reader = new FileReader()

@@ -4,16 +4,20 @@ import { QuestionsAccordion } from '@/components/questions-accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
+import { startGame } from '@/lib/game-engine'
 import { ArrowRightIcon } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function QuestionsPage() {
-  const { gameState, isReady } = useGameStateSync()
+  const router = useRouter()
+  const { gameState, setGameState, isReady } = useGameStateSync()
 
-  useEffect(() => {
-    sessionStorage.removeItem('fam-feud-importing')
-  }, [])
+  const handleStartGame = () => {
+    if (!gameState) return
+    setGameState(startGame(gameState))
+    router.push('/admin')
+  }
 
   if (!isReady) {
     return <div className='min-h-screen bg-slate-50' />
@@ -54,7 +58,7 @@ export default function QuestionsPage() {
             <p className='text-slate-500 text-sm mt-1'>
               {gameState.rounds.length} question
               {gameState.rounds.length === 1 ? '' : 's'} imported — review
-              below, then start the game from the admin panel.
+              below, then start the game when you are ready.
             </p>
           </div>
           <Button
@@ -74,8 +78,7 @@ export default function QuestionsPage() {
 
         <div className='flex justify-center pt-2 pb-6'>
           <Button
-            nativeButton={false}
-            render={<Link href='/admin' />}
+            onClick={handleStartGame}
             className='h-12 gap-2 bg-slate-800 px-8 text-base hover:bg-slate-700'
           >
             Start Game
