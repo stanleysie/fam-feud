@@ -16,9 +16,23 @@ export type Action =
   | { type: 'reveal'; answerIndex: number; points: number }
   | { type: 'wrong'; answerIndex: number };
 
+export interface RoundSnapshot {
+  revealedAnswers: number[];
+  strikes: number;
+  roundPoints: number;
+  roundWinner: 1 | 2 | null;
+  activeTeam: 1 | 2;
+  isStealPhase: boolean;
+  roundStatus: 'ended';
+  team1Score: number;
+  team2Score: number;
+}
+
 export interface GameState {
   rounds: Round[];
   currentRoundIndex: number;
+  viewRoundIndex: number;
+  roundSnapshots: (RoundSnapshot | null)[];
 
   revealedAnswers: number[];
   wrongAnswers: number[];
@@ -36,6 +50,9 @@ export interface GameState {
 
   actionHistory: Action[];
 
+  finalScoresRevealed: boolean;
+  endedWithUnrevealedAnswers: boolean;
+
   updatedAt: number;
 }
 
@@ -43,6 +60,8 @@ export function createInitialState(rounds: Round[]): GameState {
   return {
     rounds,
     currentRoundIndex: 0,
+    viewRoundIndex: 0,
+    roundSnapshots: rounds.map(() => null),
     revealedAnswers: [],
     wrongAnswers: [],
     strikes: 0,
@@ -54,6 +73,8 @@ export function createInitialState(rounds: Round[]): GameState {
     roundWinner: null,
     roundPoints: 0,
     actionHistory: [],
+    finalScoresRevealed: false,
+    endedWithUnrevealedAnswers: false,
     updatedAt: Date.now(),
   };
 }

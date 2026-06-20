@@ -1,3 +1,4 @@
+import { normalizeGameState } from '@/lib/game-engine';
 import { GameState } from '@/types/game';
 
 const STORAGE_KEY = 'gameState';
@@ -7,7 +8,7 @@ export function getGameState(): GameState | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as GameState;
+    return normalizeGameState(JSON.parse(raw) as GameState);
   } catch {
     return null;
   }

@@ -143,37 +143,7 @@
   }
 }
 
-@keyframes x-overlay {
-  0% {
-    transform: scale(0) rotate(-45deg);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2) rotate(5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
-}
-
-@keyframes x-fade {
-  0% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 .animate-reveal-block {
   animation: reveal-block 0.4s ease-out forwards;
   transform-origin: center top;
-}
-
-.animate-x-overlay {
-  animation: x-overlay 0.3s ease-out forwards, x-fade 1.5s ease-out forwards;
 }

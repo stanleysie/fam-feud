@@ -1,21 +1,33 @@
 'use client'
 
+import { QuestionsModal } from '@/components/questions-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  endRound,
+  canGoNextView,
+  canGoPrevView,
   getActiveRound,
+  getEffectiveState,
+  goToLastRound,
+  hasNextRound,
+  isLiveView,
+  isReviewMode,
   markWrong,
   nextRound,
-  prevRound,
-  resolveSteal,
+  nextRoundView,
+  prevRoundView,
   revealAnswer,
+  revealRemainingAnswer,
   switchActiveTeam,
   undoAction,
 } from '@/lib/game-engine'
+import {
+  SAMPLE_IMPORT_DATA,
+  validateImportData,
+} from '@/lib/import-validation'
 import { playCorrectSound, playWrongSound } from '@/lib/sounds'
 import {
   clearGameState,
@@ -23,49 +35,25 @@ import {
   onUpdate,
   setGameState,
 } from '@/lib/storage'
-import { createInitialState, GameState, ImportData } from '@/types/game'
+import { createInitialState, GameState, ImportData, Round } from '@/types/game'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  RotateCcwIcon,
+  SkipForwardIcon,
+  Volume2Icon,
+  XIcon,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-const SAMPLE_DATA: ImportData = {
-  rounds: [
-    {
-      question: 'Name something you bring to the beach',
-      answers: [
-        { text: 'Sunscreen', points: 35 },
-        { text: 'Towel', points: 28 },
-        { text: 'Umbrella', points: 20 },
-        { text: 'Cooler', points: 12 },
-        { text: 'Chair', points: 5 },
-      ],
-    },
-    {
-      question: 'Name a popular pizza topping',
-      answers: [
-        { text: 'Pepperoni', points: 40 },
-        { text: 'Mushrooms', points: 22 },
-        { text: 'Sausage', points: 18 },
-        { text: 'Onions', points: 12 },
-        { text: 'Bell Peppers', points: 8 },
-      ],
-    },
-    {
-      question: 'Name something you find in a toolbox',
-      answers: [
-        { text: 'Hammer', points: 30 },
-        { text: 'Screwdriver', points: 25 },
-        { text: 'Wrench', points: 20 },
-        { text: 'Pliers', points: 15 },
-        { text: 'Tape Measure', points: 10 },
-      ],
-    },
-  ],
-}
-
 export default function AdminPage() {
+  const router = useRouter()
   const [gameState, setGameStateLocal] = useState<GameState | null>(null)
   const [jsonInput, setJsonInput] = useState('')
   const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
+  const [questionsOpen, setQuestionsOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -84,44 +72,26 @@ export default function AdminPage() {
   }, [])
 
   const validateAndImport = (data: ImportData) => {
-    setError('')
-    if (
-      !data.rounds ||
-      !Array.isArray(data.rounds) ||
-      data.rounds.length === 0
-    ) {
-      setError(
-        'Invalid format: must have a "rounds" array with at least one round.',
-      )
+    const validationError = validateImportData(data)
+    if (validationError) {
+      setError(validationError)
       return false
     }
-    for (const round of data.rounds) {
-      if (
-        !round.question ||
-        !Array.isArray(round.answers) ||
-        round.answers.length === 0
-      ) {
-        setError('Each round must have a "question" and at least one "answer".')
-        return false
-      }
-      for (const answer of round.answers) {
-        if (!answer.text || typeof answer.points !== 'number') {
-          setError(
-            'Each answer must have "text" (string) and "points" (number).',
-          )
-          return false
-        }
-      }
-    }
+    setError('')
     return true
+  }
+
+  const completeImport = (rounds: Round[]) => {
+    updateState(createInitialState(rounds))
+    setJsonInput('')
+    router.push('/questions')
   }
 
   const handleImport = () => {
     try {
       const data: ImportData = JSON.parse(jsonInput)
       if (validateAndImport(data)) {
-        updateState(createInitialState(data.rounds))
-        setJsonInput('')
+        completeImport(data.rounds)
       }
     } catch {
       setError('Invalid JSON. Please check the format.')
@@ -136,8 +106,7 @@ export default function AdminPage() {
       try {
         const data: ImportData = JSON.parse(content)
         if (validateAndImport(data)) {
-          updateState(createInitialState(data.rounds))
-          setJsonInput('')
+          completeImport(data.rounds)
         }
       } catch {
         setError('Invalid JSON file. Please check the format.')
@@ -168,31 +137,29 @@ export default function AdminPage() {
   }
 
   const handleLoadSample = () => {
-    setJsonInput(JSON.stringify(SAMPLE_DATA, null, 2))
+    setJsonInput(JSON.stringify(SAMPLE_IMPORT_DATA, null, 2))
   }
 
   const handleReveal = (answerIndex: number) => {
-    if (!gameState) return
-    const newState = revealAnswer(gameState, answerIndex)
-    playCorrectSound()
+    if (!gameState || !isLiveView(gameState)) return
+    const isCosmeticReveal = gameState.roundStatus === 'ended'
+    const newState = isCosmeticReveal
+      ? revealRemainingAnswer(gameState, answerIndex)
+      : revealAnswer(gameState, answerIndex)
+    if (!isCosmeticReveal) {
+      playCorrectSound()
+    }
     updateState(newState)
   }
 
   const handleWrong = () => {
     if (!gameState) return
+    const wasStealPhase = gameState.isStealPhase
     const newState = markWrong(gameState)
-    playWrongSound()
+    if (!wasStealPhase) {
+      playWrongSound()
+    }
     updateState(newState)
-  }
-
-  const handleStealSuccess = () => {
-    if (!gameState) return
-    updateState(resolveSteal(gameState, true))
-  }
-
-  const handleStealFail = () => {
-    if (!gameState) return
-    updateState(resolveSteal(gameState, false))
   }
 
   const handleUndo = () => {
@@ -200,19 +167,24 @@ export default function AdminPage() {
     updateState(undoAction(gameState))
   }
 
-  const handleEndRound = () => {
-    if (!gameState) return
-    updateState(endRound(gameState))
-  }
-
-  const handleNext = () => {
+  const handleNextQuestion = () => {
     if (!gameState) return
     updateState(nextRound(gameState))
   }
 
   const handlePrev = () => {
     if (!gameState) return
-    updateState(prevRound(gameState))
+    updateState(prevRoundView(gameState))
+  }
+
+  const handleNextView = () => {
+    if (!gameState) return
+    updateState(nextRoundView(gameState))
+  }
+
+  const handleGoToLastRound = () => {
+    if (!gameState) return
+    updateState(goToLastRound(gameState))
   }
 
   const handleSwitchTeam = () => {
@@ -337,69 +309,130 @@ export default function AdminPage() {
     )
   }
 
-  const round = getActiveRound(gameState)
+  const round = getActiveRound(getEffectiveState(gameState))
+  const viewState = getEffectiveState(gameState)
+  const live = isLiveView(gameState)
+  const review = isReviewMode(gameState)
+  const canGoNext = hasNextRound(gameState)
+  const hasUnrevealedAnswers =
+    live &&
+    round &&
+    !round.answers.every((_, index) =>
+      gameState.revealedAnswers.includes(index),
+    )
+  const showAnswers =
+    round &&
+    (review ||
+      gameState.roundStatus === 'active' ||
+      (live && gameState.roundStatus === 'ended'))
+  const canUndo =
+    live &&
+    gameState.roundStatus === 'active' &&
+    gameState.actionHistory.length > 0
+  const displayActiveTeam = live ? gameState.activeTeam : viewState.activeTeam
 
   return (
     <div className='min-h-screen bg-slate-50 text-slate-800 p-4 md:p-6'>
-      <div className='max-w-5xl mx-auto space-y-4'>
+      <div className='max-w-5xl mx-auto space-y-4 pb-4'>
         <div className='flex items-center justify-between'>
           <h1 className='text-2xl font-bold text-slate-800'>
             Family Feud - Admin
           </h1>
-          <Button onClick={handleClear} variant='destructive' size='sm'>
-            Reset Game
-          </Button>
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={() => setQuestionsOpen(true)}
+              variant='outline'
+              size='sm'
+            >
+              Questions
+            </Button>
+            <Button onClick={handleClear} variant='destructive' size='sm'>
+              Reset Game
+            </Button>
+          </div>
         </div>
+
+        <QuestionsModal
+          rounds={gameState.rounds}
+          currentRoundIndex={gameState.currentRoundIndex}
+          open={questionsOpen}
+          onOpenChange={setQuestionsOpen}
+        />
 
         {/* Team Scores - 2 columns */}
         <div className='grid grid-cols-2 gap-3'>
           <button
             onClick={handleSwitchTeam}
+            disabled={!live || gameState.roundStatus === 'ended'}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
-              gameState.activeTeam === 1
+              displayActiveTeam === 1
                 ? 'bg-blue-500 border-blue-600 text-white shadow-md'
                 : 'bg-white border-slate-200 hover:border-slate-300'
-            }`}
+            } ${!live || gameState.roundStatus === 'ended' ? 'opacity-80 cursor-default' : ''}`}
           >
             <div
-              className={`text-xs font-semibold tracking-wider mb-1 ${gameState.activeTeam === 1 ? 'text-blue-100' : 'text-slate-400'}`}
+              className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 1 ? 'text-blue-100' : 'text-slate-400'}`}
             >
               TEAM 1
             </div>
             <div
-              className={`text-3xl font-bold ${gameState.activeTeam === 1 ? 'text-white' : 'text-slate-800'}`}
+              className={`text-3xl font-bold ${displayActiveTeam === 1 ? 'text-white' : 'text-slate-800'}`}
             >
-              {gameState.team1Score}
+              {viewState.team1Score}
             </div>
           </button>
 
           <button
             onClick={handleSwitchTeam}
+            disabled={!live || gameState.roundStatus === 'ended'}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
-              gameState.activeTeam === 2
+              displayActiveTeam === 2
                 ? 'bg-red-500 border-red-600 text-white shadow-md'
                 : 'bg-white border-slate-200 hover:border-slate-300'
-            }`}
+            } ${!live || gameState.roundStatus === 'ended' ? 'opacity-80 cursor-default' : ''}`}
           >
             <div
-              className={`text-xs font-semibold tracking-wider mb-1 ${gameState.activeTeam === 2 ? 'text-red-100' : 'text-slate-400'}`}
+              className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 2 ? 'text-red-100' : 'text-slate-400'}`}
             >
               TEAM 2
             </div>
             <div
-              className={`text-3xl font-bold ${gameState.activeTeam === 2 ? 'text-white' : 'text-slate-800'}`}
+              className={`text-3xl font-bold ${displayActiveTeam === 2 ? 'text-white' : 'text-slate-800'}`}
             >
-              {gameState.team2Score}
+              {viewState.team2Score}
             </div>
           </button>
         </div>
 
+        {review && (
+          <Card className='bg-slate-100 border-slate-300'>
+            <CardContent className='p-3 text-center text-sm text-slate-600'>
+              Reviewing question {gameState.viewRoundIndex + 1} — final state
+              (read-only)
+            </CardContent>
+          </Card>
+        )}
+
         {/* Round Info */}
+        {!round && (
+          <Card className='bg-red-50 border-red-200'>
+            <CardContent className='p-4 text-center space-y-3'>
+              <div className='text-red-800 font-medium'>
+                Past the last question (Q{gameState.currentRoundIndex + 1}/
+                {gameState.rounds.length})
+              </div>
+              <Button onClick={handleGoToLastRound} variant='outline'>
+                Go to last question
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className='bg-white border-slate-200 shadow-sm'>
           <CardContent className='p-3'>
             <div className='flex flex-wrap items-center gap-3 text-sm'>
               <Badge variant='outline' className='bg-slate-100'>
-                Q{gameState.currentRoundIndex + 1}/{gameState.rounds.length}
+                Q{viewState.currentRoundIndex + 1}/{gameState.rounds.length}
               </Badge>
               <div className='font-medium text-slate-600 truncate flex-1'>
                 {round?.question}
@@ -408,7 +441,7 @@ export default function AdminPage() {
               <div className='text-slate-500'>
                 Points:{' '}
                 <span className='font-bold text-amber-500'>
-                  {gameState.roundPoints}
+                  {viewState.roundPoints}
                 </span>
               </div>
               <Separator orientation='vertical' className='h-4' />
@@ -416,18 +449,20 @@ export default function AdminPage() {
                 Strikes:{' '}
                 <span className='font-bold text-red-500'>
                   {Array.from({ length: 3 }, (_, i) =>
-                    i < gameState.strikes ? '✗ ' : '○ ',
+                    i < viewState.strikes ? '✗ ' : '○ ',
                   )}
                 </span>
               </div>
               <Separator orientation='vertical' className='h-4' />
               <div>
-                {gameState.isStealPhase ? (
+                {viewState.isStealPhase ? (
                   <Badge className='bg-orange-500'>
-                    STEAL - Team {gameState.activeTeam}
+                    STEAL - Team {viewState.activeTeam}
                   </Badge>
-                ) : gameState.roundStatus === 'ended' ? (
+                ) : viewState.roundStatus === 'ended' ? (
                   <Badge className='bg-green-500'>ENDED</Badge>
+                ) : review ? (
+                  <Badge variant='outline'>REVIEW</Badge>
                 ) : (
                   <Badge className='bg-blue-500'>ACTIVE</Badge>
                 )}
@@ -437,7 +472,7 @@ export default function AdminPage() {
         </Card>
 
         {/* Round End Summary */}
-        {gameState.roundStatus === 'ended' && (
+        {live && gameState.roundStatus === 'ended' && (
           <Card className='bg-amber-50 border-amber-200'>
             <CardContent className='p-4 text-center'>
               <div className='text-lg font-bold mb-2 text-slate-800'>
@@ -445,26 +480,47 @@ export default function AdminPage() {
                   ? `Team ${gameState.roundWinner} wins ${gameState.roundPoints} points!`
                   : 'No points awarded'}
               </div>
-              <Button
-                onClick={handleNext}
-                className='bg-slate-800 hover:bg-slate-700'
-              >
-                Next Question
-              </Button>
+              {hasUnrevealedAnswers && (
+                <p className='text-sm text-slate-600 mb-3'>
+                  Reveal remaining answers below before moving on (no extra
+                  points).
+                </p>
+              )}
+              {canGoNext ? (
+                <Button
+                  onClick={handleNextQuestion}
+                  className='bg-slate-800 hover:bg-slate-700'
+                >
+                  Next Question
+                </Button>
+              ) : (
+                <div className='text-slate-600 font-medium'>
+                  Game complete — Team 1: {gameState.team1Score} · Team 2:{' '}
+                  {gameState.team2Score}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
         {/* Answers */}
-        {round && gameState.roundStatus === 'active' && (
+        {showAnswers && (
           <Card className='bg-white border-slate-200 shadow-sm'>
             <CardHeader className='pb-3'>
-              <CardTitle className='text-lg text-slate-800'>Answers</CardTitle>
+              <CardTitle className='text-lg text-slate-800'>
+                Answers{review ? ' (read-only)' : ''}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className='space-y-2'>
                 {round.answers.map((answer, index) => {
-                  const isRevealed = gameState.revealedAnswers.includes(index)
+                  const isRevealed = viewState.revealedAnswers.includes(index)
+                  const canReveal =
+                    live &&
+                    !review &&
+                    !isRevealed &&
+                    (gameState.roundStatus === 'active' ||
+                      gameState.roundStatus === 'ended')
 
                   return (
                     <div
@@ -489,7 +545,9 @@ export default function AdminPage() {
                       <div className='flex items-center gap-2 shrink-0'>
                         {isRevealed ? (
                           <Badge className='bg-green-500'>Revealed</Badge>
-                        ) : (
+                        ) : review ? (
+                          <Badge variant='outline'>Hidden</Badge>
+                        ) : canReveal ? (
                           <Button
                             size='sm'
                             onClick={() => handleReveal(index)}
@@ -497,7 +555,7 @@ export default function AdminPage() {
                           >
                             Reveal
                           </Button>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )
@@ -508,83 +566,116 @@ export default function AdminPage() {
         )}
 
         {/* Controls */}
-        {gameState.roundStatus === 'active' && !gameState.isStealPhase && (
-          <div className='flex flex-wrap gap-2 justify-center'>
-            <Button
-              onClick={handlePrev}
-              variant='outline'
-              disabled={gameState.currentRoundIndex === 0}
-            >
-              Prev
-            </Button>
-            <Button
-              onClick={handleUndo}
-              variant='outline'
-              disabled={gameState.actionHistory.length === 0}
-            >
-              Undo
-            </Button>
-            <Button
-              onClick={handleWrong}
-              variant='destructive'
-              disabled={gameState.strikes >= 3}
-            >
-              No Answer
-            </Button>
-            <Button
-              onClick={handleEndRound}
-              variant='outline'
-              className='border-amber-300 text-amber-600 hover:bg-amber-50'
-            >
-              End Round
-            </Button>
-            <Button onClick={handleNext} variant='destructive'>
-              Skip (Forfeit)
-            </Button>
-          </div>
-        )}
-
-        {/* Steal Controls */}
-        {gameState.isStealPhase && (
-          <Card className='bg-orange-50 border-orange-200'>
-            <CardContent className='p-4 text-center space-y-3'>
-              <div className='text-lg font-bold text-orange-800'>
-                Team {gameState.activeTeam} is stealing!
-              </div>
-              <div className='flex gap-2 justify-center'>
+        <Card className='bg-white border-slate-200 shadow-sm'>
+          <CardContent className='p-4 space-y-4'>
+            {/* Review past questions */}
+            <div className='space-y-2'>
+              <p className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                Review questions
+              </p>
+              <div className='flex flex-wrap gap-2'>
                 <Button
-                  onClick={handleStealSuccess}
-                  className='bg-green-500 hover:bg-green-600 text-white'
+                  onClick={handlePrev}
+                  variant='outline'
+                  disabled={!canGoPrevView(gameState)}
+                  className='min-w-[8.5rem] border-slate-200'
                 >
-                  Steal Correct
+                  <ChevronLeftIcon />
+                  Previous
                 </Button>
-                <Button onClick={handleStealFail} variant='destructive'>
-                  Steal Wrong
+                <Button
+                  onClick={handleNextView}
+                  variant='outline'
+                  disabled={!canGoNextView(gameState)}
+                  className='min-w-[8.5rem] border-slate-200'
+                >
+                  Next
+                  <ChevronRightIcon />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <p className='text-xs text-slate-500'>
+                Browse completed questions on Game View (read-only).
+              </p>
+            </div>
 
-        {/* Sound Test */}
-        <div className='flex gap-2 justify-center pb-4'>
-          <Button
-            onClick={playCorrectSound}
-            variant='outline'
-            size='sm'
-            className='border-green-200 text-green-600 hover:bg-green-50'
-          >
-            Correct Sound
-          </Button>
-          <Button
-            onClick={playWrongSound}
-            variant='outline'
-            size='sm'
-            className='border-red-200 text-red-600 hover:bg-red-50'
-          >
-            Wrong Sound
-          </Button>
-        </div>
+            {live && gameState.roundStatus === 'active' && (
+              <>
+                <div className='border-t border-slate-100' />
+
+                {/* Live round actions */}
+                <div className='space-y-2'>
+                  <p className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                    Round actions
+                  </p>
+                  <div className='flex flex-wrap gap-2'>
+                    <Button
+                      onClick={handleUndo}
+                      variant='outline'
+                      disabled={!canUndo}
+                      className='border-slate-200'
+                    >
+                      <RotateCcwIcon />
+                      Undo
+                    </Button>
+                    <Button
+                      onClick={handleWrong}
+                      disabled={
+                        !gameState.isStealPhase && gameState.strikes >= 3
+                      }
+                      className='bg-red-500 hover:bg-red-600 text-white min-w-[9rem]'
+                    >
+                      <XIcon />
+                      {gameState.isStealPhase ? 'Steal wrong' : 'No answer'}
+                    </Button>
+                    <Button
+                      onClick={handleNextQuestion}
+                      variant='outline'
+                      disabled={!canGoNext}
+                      className='border-amber-300 text-amber-700 hover:bg-amber-50 min-w-[9rem]'
+                    >
+                      <SkipForwardIcon />
+                      Skip question
+                    </Button>
+                  </div>
+                  <p className='text-xs text-slate-500'>
+                    {gameState.isStealPhase
+                      ? 'Reveal an answer if the steal is correct, or mark wrong if not.'
+                      : 'Undo only reverses the last reveal or wrong answer.'}
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className='border-t border-slate-100' />
+
+            {/* Sound test */}
+            <div className='space-y-2'>
+              <p className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
+                Sound check
+              </p>
+              <div className='flex flex-wrap gap-2'>
+                <Button
+                  onClick={playCorrectSound}
+                  variant='outline'
+                  size='sm'
+                  className='border-green-200 text-green-700 hover:bg-green-50'
+                >
+                  <Volume2Icon />
+                  Correct
+                </Button>
+                <Button
+                  onClick={playWrongSound}
+                  variant='outline'
+                  size='sm'
+                  className='border-red-200 text-red-700 hover:bg-red-50'
+                >
+                  <Volume2Icon />
+                  Wrong
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

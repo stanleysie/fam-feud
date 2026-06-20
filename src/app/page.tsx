@@ -15,10 +15,10 @@ export default function Home() {
             Admin Panel
           </Link>
           <Link
-            href="/display"
+            href="/game-view"
             className="px-8 py-4 bg-amber-500 hover:bg-amber-400 text-white text-xl font-bold rounded-xl transition-colors shadow-lg"
           >
-            Display Screen
+            Game View
           </Link>
         </div>
       </div>
