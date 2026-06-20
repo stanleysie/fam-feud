@@ -39,11 +39,14 @@ import { createInitialState, GameState, ImportData, Round } from '@/types/game'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  ListIcon,
+  MonitorIcon,
   RotateCcwIcon,
   SkipForwardIcon,
   Volume2Icon,
   XIcon,
 } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -334,23 +337,54 @@ export default function AdminPage() {
   return (
     <div className='min-h-screen bg-slate-50 text-slate-800 p-4 md:p-6'>
       <div className='max-w-5xl mx-auto space-y-4 pb-4'>
-        <div className='flex items-center justify-between'>
-          <h1 className='text-2xl font-bold text-slate-800'>
-            Family Feud - Admin
-          </h1>
-          <div className='flex items-center gap-2'>
-            <Button
-              onClick={() => setQuestionsOpen(true)}
-              variant='outline'
-              size='sm'
-            >
-              Questions
-            </Button>
-            <Button onClick={handleClear} variant='destructive' size='sm'>
-              Reset Game
-            </Button>
-          </div>
-        </div>
+        <Card className='bg-white border-slate-200 shadow-sm'>
+          <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4'>
+            <div className='flex items-center gap-3 min-w-0'>
+              <h1 className='text-xl font-bold leading-none tracking-tight text-slate-800 sm:text-2xl'>
+                FAMILY <span className='text-amber-500'>FEUD</span>
+              </h1>
+              <div className='hidden h-6 w-px bg-slate-200 sm:block' />
+              <span className='hidden text-sm leading-none text-slate-500 sm:inline'>
+                Admin panel
+              </span>
+              {review && <Badge className='bg-slate-500'>Reviewing</Badge>}
+            </div>
+
+            <div className='flex flex-wrap items-center gap-2'>
+              <Button
+                nativeButton={false}
+                render={
+                  <Link
+                    href='/game-view'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  />
+                }
+                variant='outline'
+                className='border-slate-200'
+              >
+                <MonitorIcon />
+                Game View
+              </Button>
+              <Button
+                onClick={() => setQuestionsOpen(true)}
+                variant='outline'
+                className='border-slate-200'
+              >
+                <ListIcon />
+                Questions
+              </Button>
+              <Button
+                onClick={handleClear}
+                variant='outline'
+                className='border-red-200 text-red-600 hover:bg-red-50'
+              >
+                <RotateCcwIcon />
+                Reset game
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <QuestionsModal
           rounds={gameState.rounds}
@@ -387,12 +421,12 @@ export default function AdminPage() {
             disabled={!live || gameState.roundStatus === 'ended'}
             className={`p-4 rounded-xl border-2 transition-all text-center ${
               displayActiveTeam === 2
-                ? 'bg-red-500 border-red-600 text-white shadow-md'
+                ? 'bg-blue-500 border-blue-600 text-white shadow-md'
                 : 'bg-white border-slate-200 hover:border-slate-300'
             } ${!live || gameState.roundStatus === 'ended' ? 'opacity-80 cursor-default' : ''}`}
           >
             <div
-              className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 2 ? 'text-red-100' : 'text-slate-400'}`}
+              className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 2 ? 'text-blue-100' : 'text-slate-400'}`}
             >
               TEAM 2
             </div>

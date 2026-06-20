@@ -315,7 +315,7 @@ export default function GameViewPage() {
               </div>
             </div>
             <div
-              className={`w-3 h-3 rounded-full ${viewState.activeTeam === 2 && !review ? 'bg-red-400 animate-pulse' : 'bg-slate-600'}`}
+              className={`w-3 h-3 rounded-full ${viewState.activeTeam === 2 && !review ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}
             />
           </div>
         </div>
