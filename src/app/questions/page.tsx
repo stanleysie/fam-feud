@@ -58,7 +58,7 @@ export default function QuestionsPage() {
             <p className='text-slate-500 text-sm mt-1'>
               {gameState.rounds.length} question
               {gameState.rounds.length === 1 ? '' : 's'} imported — review
-              below, then start the game when you are ready.
+              below, then start when you are ready.
             </p>
           </div>
           <Button

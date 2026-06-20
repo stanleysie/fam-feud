@@ -3,6 +3,7 @@
 import { AnimateIn } from '@/components/animate-in'
 import { AppBackground } from '@/components/app-background'
 import { FeudTitle } from '@/components/feud-title'
+import { QuestionBuilder } from '@/components/question-builder'
 import { QuestionsModal } from '@/components/questions-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -269,8 +270,7 @@ export default function AdminPage() {
                     Import questions
                   </CardTitle>
                   <p className='text-sm font-normal text-slate-500'>
-                    Load a JSON file or paste your round data to start a new
-                    game.
+                    Import JSON or build your own questions.
                   </p>
                 </CardHeader>
                 <CardContent className='space-y-4 p-4 md:p-6'>
@@ -338,6 +338,24 @@ export default function AdminPage() {
                       {error}
                     </p>
                   )}
+
+                  <div className='relative'>
+                    <div className='absolute inset-0 flex items-center'>
+                      <div className='w-full border-t border-slate-200' />
+                    </div>
+                    <div className='relative flex justify-center text-xs'>
+                      <span className='bg-white px-3 text-slate-400 uppercase tracking-wider'>
+                        or build your own
+                      </span>
+                    </div>
+                  </div>
+
+                  <QuestionBuilder
+                    onSubmit={(rounds) => {
+                      setError('')
+                      completeImport(rounds)
+                    }}
+                  />
                 </CardContent>
               </Card>
             </AnimateIn>
