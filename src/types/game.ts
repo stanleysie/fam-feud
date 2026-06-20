@@ -35,7 +35,6 @@ export interface GameState {
   roundSnapshots: (RoundSnapshot | null)[];
 
   revealedAnswers: number[];
-  wrongAnswers: number[];
   strikes: number;
 
   activeTeam: 1 | 2;
@@ -51,7 +50,6 @@ export interface GameState {
   actionHistory: Action[];
 
   finalScoresRevealed: boolean;
-  endedWithUnrevealedAnswers: boolean;
   gameStarted: boolean;
 
   updatedAt: number;
@@ -64,7 +62,6 @@ export function createInitialState(rounds: Round[]): GameState {
     viewRoundIndex: 0,
     roundSnapshots: rounds.map(() => null),
     revealedAnswers: [],
-    wrongAnswers: [],
     strikes: 0,
     activeTeam: 1,
     team1Score: 0,
@@ -75,7 +72,6 @@ export function createInitialState(rounds: Round[]): GameState {
     roundPoints: 0,
     actionHistory: [],
     finalScoresRevealed: false,
-    endedWithUnrevealedAnswers: false,
     gameStarted: false,
     updatedAt: Date.now(),
   };

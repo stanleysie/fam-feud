@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export const FLOATING_CHIPS = [
+const FLOATING_CHIPS = [
   {
     label: '100',
     className: 'top-[12%] left-[6%] text-amber-500/20',

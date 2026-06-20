@@ -1,6 +1,7 @@
 'use client'
 
 import { AppBackground } from '@/components/app-background'
+import { FeudTitle } from '@/components/feud-title'
 import { ArrowRightIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -26,14 +27,10 @@ export function LandingHero() {
             <p className='text-sm font-semibold uppercase tracking-[0.3em] text-slate-400 animate-landing-fade-up'>
               Survey says…
             </p>
-            <h1 className='text-5xl font-black tracking-tight animate-landing-fade-up [animation-delay:100ms] md:text-7xl lg:text-8xl'>
-              <span className='inline-block text-slate-800 transition-transform duration-300 hover:scale-105 hover:-rotate-1'>
-                FAM
-              </span>{' '}
-              <span className='inline-block text-amber-500 transition-transform duration-300 hover:scale-110 hover:rotate-1 drop-shadow-sm'>
-                FEUD
-              </span>
-            </h1>
+            <FeudTitle
+              size='hero'
+              className='animate-landing-fade-up [animation-delay:100ms]'
+            />
             <p className='mx-auto max-w-md text-lg text-slate-500 animate-landing-fade-up [animation-delay:200ms] md:text-xl'>
               Host your own game. Import questions, control the board, and play
               on the big screen.

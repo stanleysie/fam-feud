@@ -48,7 +48,11 @@ export function validateImportData(data: ImportData): string | null {
       return 'Each round must have a "question" and at least one "answer".'
     }
     for (const answer of round.answers) {
-      if (!answer.text || typeof answer.points !== 'number') {
+      if (
+        !answer.text ||
+        typeof answer.points !== 'number' ||
+        !Number.isFinite(answer.points)
+      ) {
         return 'Each answer must have "text" (string) and "points" (number).'
       }
     }

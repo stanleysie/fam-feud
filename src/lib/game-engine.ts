@@ -7,7 +7,6 @@ export function normalizeGameState(state: GameState): GameState {
     roundSnapshots:
       state.roundSnapshots ?? state.rounds.map(() => null),
     finalScoresRevealed: state.finalScoresRevealed ?? false,
-    endedWithUnrevealedAnswers: state.endedWithUnrevealedAnswers ?? false,
     gameStarted: state.gameStarted ?? false,
   }
 }
@@ -96,13 +95,9 @@ export function getVisibleAnswers(state: GameState): number[] {
   return round.answers.map((_, i) => i)
 }
 
-export function isAllRevealed(state: GameState): boolean {
+function isAllRevealed(state: GameState): boolean {
   const visible = getVisibleAnswers(state)
   return visible.every((i) => state.revealedAnswers.includes(i))
-}
-
-export function canSteal(state: GameState): boolean {
-  return state.isStealPhase && state.strikes >= 3
 }
 
 function createRoundSnapshot(state: GameState): RoundSnapshot {
@@ -142,10 +137,6 @@ function finishRound(
     roundWinner: winner,
     isStealPhase: false,
     activeTeam: nextActiveTeam,
-    endedWithUnrevealedAnswers: !isAllRevealed({
-      ...withScore,
-      roundStatus: 'ended' as const,
-    }),
     updatedAt: Date.now(),
   }
 
@@ -235,7 +226,7 @@ export function markWrong(state: GameState): GameState {
   return updated
 }
 
-export function resolveSteal(state: GameState, success: boolean): GameState {
+function resolveSteal(state: GameState, success: boolean): GameState {
   const normalized = normalizeGameState(state)
   if (!normalized.isStealPhase) return normalized
 
@@ -289,7 +280,6 @@ function resetRoundState(state: GameState, roundIndex: number): GameState {
     currentRoundIndex: roundIndex,
     viewRoundIndex: roundIndex,
     revealedAnswers: [],
-    wrongAnswers: [],
     strikes: 0,
     roundStatus: 'active',
     roundWinner: null,
@@ -297,7 +287,6 @@ function resetRoundState(state: GameState, roundIndex: number): GameState {
     actionHistory: [],
     isStealPhase: false,
     finalScoresRevealed: false,
-    endedWithUnrevealedAnswers: false,
     updatedAt: Date.now(),
   }
 }

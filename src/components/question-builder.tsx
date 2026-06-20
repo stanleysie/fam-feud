@@ -112,13 +112,6 @@ export function QuestionBuilder({ onSubmit }: QuestionBuilderProps) {
       return
     }
 
-    for (const round of parsed) {
-      if (round.answers.some((answer) => Number.isNaN(answer.points))) {
-        setError('Each answer needs a valid point value.')
-        return
-      }
-    }
-
     setError('')
     onSubmit(parsed)
   }
