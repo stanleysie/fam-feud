@@ -3,26 +3,53 @@ import { GameState } from '@/types/game';
 
 const STORAGE_KEY = 'gameState';
 
-export function getGameState(): GameState | null {
+let cachedRaw: string | null | undefined;
+let cachedState: GameState | null = null;
+
+function readFromStorage(): GameState | null {
   if (typeof window === 'undefined') return null;
+
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
+  if (raw === cachedRaw) {
+    return cachedState;
+  }
+
+  cachedRaw = raw;
+  if (!raw) {
+    cachedState = null;
+    return null;
+  }
+
   try {
-    return normalizeGameState(JSON.parse(raw) as GameState);
+    cachedState = normalizeGameState(JSON.parse(raw) as GameState);
+    return cachedState;
   } catch {
+    cachedState = null;
     return null;
   }
 }
 
+export function getGameState(): GameState | null {
+  return readFromStorage();
+}
+
 export function setGameState(state: GameState): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+  const normalized = normalizeGameState(state);
+  const raw = JSON.stringify(normalized);
+  localStorage.setItem(STORAGE_KEY, raw);
+  cachedRaw = raw;
+  cachedState = normalized;
   window.dispatchEvent(new Event('storage'));
 }
 
 export function clearGameState(): void {
   if (typeof window === 'undefined') return;
+
   localStorage.removeItem(STORAGE_KEY);
+  cachedRaw = null;
+  cachedState = null;
   window.dispatchEvent(new Event('storage'));
 }
 

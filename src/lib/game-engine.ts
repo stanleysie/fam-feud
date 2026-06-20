@@ -8,6 +8,18 @@ export function normalizeGameState(state: GameState): GameState {
       state.roundSnapshots ?? state.rounds.map(() => null),
     finalScoresRevealed: state.finalScoresRevealed ?? false,
     endedWithUnrevealedAnswers: state.endedWithUnrevealedAnswers ?? false,
+    gameStarted: state.gameStarted ?? false,
+  }
+}
+
+export function startGame(state: GameState): GameState {
+  const normalized = normalizeGameState(state)
+  if (normalized.gameStarted) return normalized
+
+  return {
+    ...normalized,
+    gameStarted: true,
+    updatedAt: Date.now(),
   }
 }
 

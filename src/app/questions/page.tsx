@@ -3,23 +3,21 @@
 import { QuestionsAccordion } from '@/components/questions-accordion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getGameState, onUpdate } from '@/lib/storage'
-import { GameState } from '@/types/game'
+import { useGameStateSync } from '@/hooks/use-game-state-sync'
+import { ArrowRightIcon } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 export default function QuestionsPage() {
-  const [gameState, setGameStateLocal] = useState<GameState | null>(null)
+  const { gameState, isReady } = useGameStateSync()
 
   useEffect(() => {
-    const existing = getGameState()
-    if (existing) setGameStateLocal(existing)
-
-    return onUpdate(() => {
-      const updated = getGameState()
-      if (updated) setGameStateLocal(updated)
-    })
+    sessionStorage.removeItem('fam-feud-importing')
   }, [])
+
+  if (!isReady) {
+    return <div className='min-h-screen bg-slate-50' />
+  }
 
   if (!gameState) {
     return (
@@ -47,7 +45,7 @@ export default function QuestionsPage() {
 
   return (
     <div className='min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8'>
-      <div className='max-w-3xl mx-auto space-y-6'>
+      <div className='mx-auto w-5/6 lg:w-2/3 space-y-6'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
             <h1 className='text-2xl md:text-3xl font-bold text-slate-800'>
@@ -55,27 +53,35 @@ export default function QuestionsPage() {
             </h1>
             <p className='text-slate-500 text-sm mt-1'>
               {gameState.rounds.length} question
-              {gameState.rounds.length === 1 ? '' : 's'} imported
+              {gameState.rounds.length === 1 ? '' : 's'} imported — review
+              below, then start the game from the admin panel.
             </p>
           </div>
-          <div className='flex flex-wrap gap-2'>
-            <Button nativeButton={false} render={<Link href='/admin' />} variant='outline'>
-              Admin Panel
-            </Button>
-            <Button
-              nativeButton={false}
-              render={<Link href='/game-view' />}
-              className='bg-amber-500 hover:bg-amber-600 text-white'
-            >
-              Game View
-            </Button>
-          </div>
+          <Button
+            nativeButton={false}
+            render={<Link href='/game-view' target='_blank' rel='noopener noreferrer' />}
+            variant='outline'
+            className='border-slate-200'
+          >
+            Open Game View
+          </Button>
         </div>
 
         <QuestionsAccordion
           rounds={gameState.rounds}
           currentRoundIndex={gameState.currentRoundIndex}
         />
+
+        <div className='flex justify-center pt-2 pb-6'>
+          <Button
+            nativeButton={false}
+            render={<Link href='/admin' />}
+            className='h-12 gap-2 bg-slate-800 px-8 text-base hover:bg-slate-700'
+          >
+            Start Game
+            <ArrowRightIcon className='size-5' />
+          </Button>
+        </div>
       </div>
     </div>
   )

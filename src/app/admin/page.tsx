@@ -1,9 +1,20 @@
 'use client'
 
+import { AnimateIn } from '@/components/animate-in'
+import { AppBackground } from '@/components/app-background'
+import { FeudTitle } from '@/components/feud-title'
 import { QuestionsModal } from '@/components/questions-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -21,20 +32,13 @@ import {
   prevRoundView,
   revealAnswer,
   revealRemainingAnswer,
+  startGame,
   switchActiveTeam,
   undoAction,
 } from '@/lib/game-engine'
-import {
-  SAMPLE_IMPORT_DATA,
-  validateImportData,
-} from '@/lib/import-validation'
+import { SAMPLE_IMPORT_DATA, validateImportData } from '@/lib/import-validation'
 import { playCorrectSound, playWrongSound } from '@/lib/sounds'
-import {
-  clearGameState,
-  getGameState,
-  onUpdate,
-  setGameState,
-} from '@/lib/storage'
+import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { createInitialState, GameState, ImportData, Round } from '@/types/game'
 import {
   ChevronLeftIcon,
@@ -43,6 +47,7 @@ import {
   MonitorIcon,
   RotateCcwIcon,
   SkipForwardIcon,
+  UploadCloudIcon,
   Volume2Icon,
   XIcon,
 } from 'lucide-react'
@@ -52,27 +57,33 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export default function AdminPage() {
   const router = useRouter()
-  const [gameState, setGameStateLocal] = useState<GameState | null>(null)
+  const { gameState, setGameState: setGameStateLocal, isReady } =
+    useGameStateSync()
   const [jsonInput, setJsonInput] = useState('')
   const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [questionsOpen, setQuestionsOpen] = useState(false)
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [importHover, setImportHover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const updateState = useCallback(
+    (newState: GameState) => {
+      setGameStateLocal(newState)
+    },
+    [setGameStateLocal],
+  )
+
   useEffect(() => {
-    const existing = getGameState()
-    if (existing) setGameStateLocal(existing)
+    if (!isReady || !gameState || gameState.gameStarted) return
+    if (sessionStorage.getItem('fam-feud-importing')) return
 
-    return onUpdate(() => {
-      const updated = getGameState()
-      if (updated) setGameStateLocal(updated)
-    })
-  }, [])
+    const timer = window.setTimeout(() => {
+      setGameStateLocal(startGame(gameState))
+    }, 0)
 
-  const updateState = useCallback((newState: GameState) => {
-    setGameStateLocal(newState)
-    setGameState(newState)
-  }, [])
+    return () => window.clearTimeout(timer)
+  }, [isReady, gameState, setGameStateLocal])
 
   const validateAndImport = (data: ImportData) => {
     const validationError = validateImportData(data)
@@ -85,21 +96,28 @@ export default function AdminPage() {
   }
 
   const completeImport = (rounds: Round[]) => {
+    sessionStorage.setItem('fam-feud-importing', '1')
     updateState(createInitialState(rounds))
     setJsonInput('')
     router.push('/questions')
   }
 
-  const handleImport = () => {
+  const handleImport = useCallback(() => {
     try {
       const data: ImportData = JSON.parse(jsonInput)
-      if (validateAndImport(data)) {
-        completeImport(data.rounds)
+      const validationError = validateImportData(data)
+      if (validationError) {
+        setError(validationError)
+        return
       }
+      setError('')
+      updateState(createInitialState(data.rounds))
+      setJsonInput('')
+      router.push('/questions')
     } catch {
       setError('Invalid JSON. Please check the format.')
     }
-  }
+  }, [jsonInput, router, updateState])
 
   const handleFileImport = (file: File) => {
     const reader = new FileReader()
@@ -142,6 +160,18 @@ export default function AdminPage() {
   const handleLoadSample = () => {
     setJsonInput(JSON.stringify(SAMPLE_IMPORT_DATA, null, 2))
   }
+
+  useEffect(() => {
+    if (gameState) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        handleImport()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [gameState, handleImport])
 
   const handleReveal = (answerIndex: number) => {
     if (!gameState || !isLiveView(gameState)) return
@@ -196,119 +226,174 @@ export default function AdminPage() {
   }
 
   const handleClear = () => {
-    clearGameState()
     setGameStateLocal(null)
     setJsonInput('')
+    setResetConfirmOpen(false)
+  }
+
+  if (!isReady) {
+    return (
+      <AppBackground className='min-h-screen'>
+        <div className='flex-1' />
+      </AppBackground>
+    )
   }
 
   if (!gameState) {
     return (
-      <div className='min-h-screen bg-slate-50 text-slate-800 flex flex-col'>
-        <div className='flex-1 p-8 pb-32'>
-          <div className='max-w-2xl mx-auto'>
-            <h1 className='text-3xl font-bold mb-8 text-slate-800'>
-              Family Feud - Admin
-            </h1>
-
-            <Card className='bg-white border-slate-200 shadow-sm'>
-              <CardHeader>
-                <CardTitle className='text-slate-800'>
-                  Import Questions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                {/* File Drop Zone */}
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                    dragActive
-                      ? 'border-blue-400 bg-blue-50'
-                      : 'border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  <div className='text-slate-400 mb-4'>
-                    <svg
-                      className='w-12 h-12 mx-auto mb-3'
-                      fill='none'
-                      viewBox='0 0 24 24'
-                      stroke='currentColor'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={1.5}
-                        d='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'
+      <AppBackground className='flex flex-col text-slate-800'>
+        <div className='flex-1 p-4 pb-44 md:p-6 md:pb-40'>
+          <div className='mx-auto w-5/6 lg:w-2/3 space-y-4'>
+            <AnimateIn className='w-full'>
+              <Card className='border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-amber-200/60 hover:shadow-md'>
+                <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4'>
+                  <div className='flex min-w-0 items-center gap-3'>
+                    <FeudTitle />
+                    <div className='hidden h-6 w-px bg-slate-200 sm:block' />
+                    <span className='hidden text-sm leading-none text-slate-500 sm:inline'>
+                      Admin panel
+                    </span>
+                  </div>
+                  <Button
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href='/game-view'
+                        target='_blank'
+                        rel='noopener noreferrer'
                       />
-                    </svg>
-                    <p className='text-sm font-medium text-slate-600'>
+                    }
+                    variant='outline'
+                    className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 hover:shadow-sm active:scale-100'
+                  >
+                    <MonitorIcon />
+                    Game View
+                  </Button>
+                </CardContent>
+              </Card>
+            </AnimateIn>
+
+            <AnimateIn delay={80}>
+              <Card className='overflow-hidden border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-amber-200/60 hover:shadow-md'>
+                <CardHeader className='border-b border-slate-100 bg-slate-50/50'>
+                  <CardTitle className='text-slate-800'>
+                    Import questions
+                  </CardTitle>
+                  <p className='text-sm font-normal text-slate-500'>
+                    Load a JSON file or paste your round data to start a new
+                    game.
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-4 p-4 md:p-6'>
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    className={`rounded-xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
+                      dragActive
+                        ? 'scale-[1.02] border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/10'
+                        : 'border-slate-200 bg-slate-50/50 hover:scale-[1.01] hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
+                    }`}
+                  >
+                    <UploadCloudIcon
+                      className={`mx-auto mb-3 size-12 transition-transform duration-300 ${
+                        dragActive
+                          ? 'scale-110 text-amber-500'
+                          : 'text-slate-400 hover:scale-105'
+                      }`}
+                    />
+                    <p className='text-sm font-medium text-slate-700'>
                       Drop a JSON file here, or{' '}
                       <button
+                        type='button'
                         onClick={() => fileInputRef.current?.click()}
-                        className='text-blue-500 hover:text-blue-600 underline'
+                        className='font-semibold text-amber-600 hover:text-amber-700 underline-offset-2 hover:underline'
                       >
                         browse
                       </button>
                     </p>
-                    <p className='text-xs text-slate-400 mt-1'>
+                    <p className='mt-1 text-xs text-slate-400'>
                       Supports .json files only
                     </p>
+                    <input
+                      ref={fileInputRef}
+                      type='file'
+                      accept='.json,application/json'
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleFileImport(file)
+                      }}
+                      className='hidden'
+                    />
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type='file'
-                    accept='.json,application/json'
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) handleFileImport(file)
-                    }}
-                    className='hidden'
+
+                  <div className='relative'>
+                    <div className='absolute inset-0 flex items-center'>
+                      <div className='w-full border-t border-slate-200' />
+                    </div>
+                    <div className='relative flex justify-center text-xs'>
+                      <span className='bg-white px-3 text-slate-400 uppercase tracking-wider'>
+                        or paste JSON
+                      </span>
+                    </div>
+                  </div>
+
+                  <Textarea
+                    value={jsonInput}
+                    onChange={(e) => setJsonInput(e.target.value)}
+                    placeholder={`{\n  "rounds": [\n    {\n      "question": "Your question here",\n      "answers": [\n        { "text": "Answer 1", "points": 30 },\n        { "text": "Answer 2", "points": 20 }\n      ]\n    }\n  ]\n}`}
+                    className='min-h-[220px] font-mono text-sm bg-slate-50 border-slate-200 transition-all duration-200 focus-visible:border-amber-400 focus-visible:ring-amber-400/20 focus-visible:shadow-md'
                   />
-                </div>
+                  {error && (
+                    <p className='animate-card-enter rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600'>
+                      {error}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </AnimateIn>
+          </div>
+        </div>
 
-                <div className='relative'>
-                  <div className='absolute inset-0 flex items-center'>
-                    <div className='w-full border-t border-slate-200' />
-                  </div>
-                  <div className='relative flex justify-center text-xs'>
-                    <span className='bg-white px-2 text-slate-400'>
-                      or paste JSON
-                    </span>
-                  </div>
-                </div>
-
-                <Textarea
-                  value={jsonInput}
-                  onChange={(e) => setJsonInput(e.target.value)}
-                  placeholder={`{\n  "rounds": [\n    {\n      "question": "Your question here",\n      "answers": [\n        { "text": "Answer 1", "points": 30 },\n        { "text": "Answer 2", "points": 20 }\n      ]\n    }\n  ]\n}`}
-                  className='min-h-[200px] font-mono text-sm bg-slate-50 border-slate-200'
+        <div className='fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm'>
+          <div className='mx-auto w-5/6 lg:w-2/3 space-y-2'>
+            <div className='flex flex-col gap-2 sm:flex-row'>
+              <button
+                type='button'
+                onClick={handleImport}
+                onMouseEnter={() => setImportHover(true)}
+                onMouseLeave={() => setImportHover(false)}
+                className='group relative h-11 flex-1 overflow-hidden rounded-lg bg-slate-800 text-base font-medium text-white transition-all duration-300 hover:scale-[1.02] hover:bg-slate-900 hover:shadow-lg hover:shadow-amber-500/20 active:scale-100'
+              >
+                <span
+                  className={`absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/25 to-amber-500/0 transition-transform duration-500 ${
+                    importHover ? 'translate-x-full' : '-translate-x-full'
+                  }`}
                 />
-                {error && <p className='text-red-500 text-sm'>{error}</p>}
-              </CardContent>
-            </Card>
+                <span className='relative'>Import &amp; review</span>
+              </button>
+              <Button
+                onClick={handleLoadSample}
+                variant='outline'
+                className='h-11 border-slate-200 transition-all duration-200 hover:scale-[1.02] hover:border-amber-300 active:scale-100 sm:min-w-[9rem]'
+              >
+                Load sample
+              </Button>
+            </div>
+            <p className='text-center text-xs text-slate-400'>
+              Press{' '}
+              <kbd className='rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-slate-600 shadow-sm'>
+                Ctrl
+              </kbd>
+              {' + '}
+              <kbd className='rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-slate-600 shadow-sm'>
+                Enter
+              </kbd>{' '}
+              to import
+            </p>
           </div>
         </div>
-
-        {/* Sticky Import Button */}
-        <div className='fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-10'>
-          <div className='max-w-2xl mx-auto flex gap-2'>
-            <Button
-              onClick={handleImport}
-              className='flex-1 bg-slate-800 hover:bg-slate-700 h-12 text-base'
-            >
-              Import
-            </Button>
-            <Button
-              onClick={handleLoadSample}
-              variant='outline'
-              className='h-12'
-            >
-              Load Sample
-            </Button>
-          </div>
-        </div>
-      </div>
+      </AppBackground>
     )
   }
 
@@ -335,56 +420,82 @@ export default function AdminPage() {
   const displayActiveTeam = live ? gameState.activeTeam : viewState.activeTeam
 
   return (
-    <div className='min-h-screen bg-slate-50 text-slate-800 p-4 md:p-6'>
-      <div className='max-w-5xl mx-auto space-y-4 pb-4'>
-        <Card className='bg-white border-slate-200 shadow-sm'>
-          <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4'>
-            <div className='flex items-center gap-3 min-w-0'>
-              <h1 className='text-xl font-bold leading-none tracking-tight text-slate-800 sm:text-2xl'>
-                FAMILY <span className='text-amber-500'>FEUD</span>
-              </h1>
-              <div className='hidden h-6 w-px bg-slate-200 sm:block' />
-              <span className='hidden text-sm leading-none text-slate-500 sm:inline'>
-                Admin panel
-              </span>
-              {review && <Badge className='bg-slate-500'>Reviewing</Badge>}
-            </div>
+    <AppBackground className='text-slate-800 p-4 md:p-6'>
+      <div className='mx-auto w-5/6 lg:w-2/3 min-w-0 space-y-4 pb-4'>
+        <AnimateIn className='w-full'>
+          <Card className='w-full border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-amber-200/60 hover:shadow-md'>
+            <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4'>
+              <div className='flex min-w-0 items-center gap-3'>
+                <FeudTitle />
+                <div className='hidden h-6 w-px bg-slate-200 sm:block' />
+                <span className='hidden text-sm leading-none text-slate-500 sm:inline'>
+                  Admin panel
+                </span>
+                {review && <Badge className='bg-slate-500'>Reviewing</Badge>}
+              </div>
 
-            <div className='flex flex-wrap items-center gap-2'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <Button
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href='/game-view'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                    />
+                  }
+                  variant='outline'
+                  className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 hover:shadow-sm active:scale-100'
+                >
+                  <MonitorIcon />
+                  Game View
+                </Button>
+                <Button
+                  onClick={() => setQuestionsOpen(true)}
+                  variant='outline'
+                  className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 active:scale-100'
+                >
+                  <ListIcon />
+                  Questions
+                </Button>
+                <Button
+                  onClick={() => setResetConfirmOpen(true)}
+                  variant='outline'
+                  className='border-red-200 text-red-600 transition-all duration-200 hover:scale-105 hover:bg-red-50 active:scale-100'
+                >
+                  <RotateCcwIcon />
+                  Reset game
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </AnimateIn>
+
+        <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+          <DialogContent showCloseButton={false} className='sm:max-w-md'>
+            <DialogHeader>
+              <DialogTitle>Reset game?</DialogTitle>
+              <DialogDescription>
+                This clears all scores, progress, and saved game state. You will
+                need to import questions again to start a new game.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
               <Button
-                nativeButton={false}
-                render={
-                  <Link
-                    href='/game-view'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  />
-                }
                 variant='outline'
-                className='border-slate-200'
+                onClick={() => setResetConfirmOpen(false)}
               >
-                <MonitorIcon />
-                Game View
-              </Button>
-              <Button
-                onClick={() => setQuestionsOpen(true)}
-                variant='outline'
-                className='border-slate-200'
-              >
-                <ListIcon />
-                Questions
+                Cancel
               </Button>
               <Button
                 onClick={handleClear}
-                variant='outline'
-                className='border-red-200 text-red-600 hover:bg-red-50'
+                className='bg-red-500 hover:bg-red-600 text-white'
               >
-                <RotateCcwIcon />
                 Reset game
               </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <QuestionsModal
           rounds={gameState.rounds}
@@ -394,15 +505,16 @@ export default function AdminPage() {
         />
 
         {/* Team Scores - 2 columns */}
+        <AnimateIn delay={60} className='w-full'>
         <div className='grid grid-cols-2 gap-3'>
           <button
             onClick={handleSwitchTeam}
             disabled={!live || gameState.roundStatus === 'ended'}
-            className={`p-4 rounded-xl border-2 transition-all text-center ${
+            className={`rounded-xl border-2 p-4 text-center transition-all duration-300 ${
               displayActiveTeam === 1
-                ? 'bg-blue-500 border-blue-600 text-white shadow-md'
-                : 'bg-white border-slate-200 hover:border-slate-300'
-            } ${!live || gameState.roundStatus === 'ended' ? 'opacity-80 cursor-default' : ''}`}
+                ? 'scale-[1.02] border-blue-600 bg-blue-500 text-white shadow-md shadow-blue-200/50'
+                : 'border-slate-200/80 bg-white/90 backdrop-blur-sm hover:scale-[1.02] hover:border-slate-300 hover:shadow-md'
+            } ${!live || gameState.roundStatus === 'ended' ? 'cursor-default opacity-80' : 'active:scale-[0.98]'}`}
           >
             <div
               className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 1 ? 'text-blue-100' : 'text-slate-400'}`}
@@ -419,11 +531,11 @@ export default function AdminPage() {
           <button
             onClick={handleSwitchTeam}
             disabled={!live || gameState.roundStatus === 'ended'}
-            className={`p-4 rounded-xl border-2 transition-all text-center ${
+            className={`rounded-xl border-2 p-4 text-center transition-all duration-300 ${
               displayActiveTeam === 2
-                ? 'bg-blue-500 border-blue-600 text-white shadow-md'
-                : 'bg-white border-slate-200 hover:border-slate-300'
-            } ${!live || gameState.roundStatus === 'ended' ? 'opacity-80 cursor-default' : ''}`}
+                ? 'scale-[1.02] border-blue-600 bg-blue-500 text-white shadow-md shadow-blue-200/50'
+                : 'border-slate-200/80 bg-white/90 backdrop-blur-sm hover:scale-[1.02] hover:border-slate-300 hover:shadow-md'
+            } ${!live || gameState.roundStatus === 'ended' ? 'cursor-default opacity-80' : 'active:scale-[0.98]'}`}
           >
             <div
               className={`text-xs font-semibold tracking-wider mb-1 ${displayActiveTeam === 2 ? 'text-blue-100' : 'text-slate-400'}`}
@@ -437,19 +549,23 @@ export default function AdminPage() {
             </div>
           </button>
         </div>
+        </AnimateIn>
 
         {review && (
-          <Card className='bg-slate-100 border-slate-300'>
+          <AnimateIn delay={90} className='w-full'>
+          <Card className='border-slate-300/80 bg-slate-100/90 backdrop-blur-sm'>
             <CardContent className='p-3 text-center text-sm text-slate-600'>
               Reviewing question {gameState.viewRoundIndex + 1} — final state
               (read-only)
             </CardContent>
           </Card>
+          </AnimateIn>
         )}
 
         {/* Round Info */}
         {!round && (
-          <Card className='bg-red-50 border-red-200'>
+          <AnimateIn className='w-full'>
+          <Card className='border-red-200/80 bg-red-50/90 backdrop-blur-sm'>
             <CardContent className='p-4 text-center space-y-3'>
               <div className='text-red-800 font-medium'>
                 Past the last question (Q{gameState.currentRoundIndex + 1}/
@@ -460,54 +576,73 @@ export default function AdminPage() {
               </Button>
             </CardContent>
           </Card>
+          </AnimateIn>
         )}
 
-        <Card className='bg-white border-slate-200 shadow-sm'>
-          <CardContent className='p-3'>
-            <div className='flex flex-wrap items-center gap-3 text-sm'>
-              <Badge variant='outline' className='bg-slate-100'>
-                Q{viewState.currentRoundIndex + 1}/{gameState.rounds.length}
-              </Badge>
-              <div className='font-medium text-slate-600 truncate flex-1'>
-                {round?.question}
+        <AnimateIn delay={100} className='w-full'>
+        <Card className='w-full border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md'>
+          <CardContent className='p-4 md:p-5'>
+            <div className='w-full space-y-3'>
+              <div className='flex w-full min-w-0 items-start gap-3'>
+                <Badge
+                  variant='outline'
+                  className='shrink-0 bg-slate-100 px-2.5 py-1 text-sm font-semibold'
+                >
+                  Q{viewState.currentRoundIndex + 1}/{gameState.rounds.length}
+                </Badge>
+                <p className='min-w-0 flex-1 text-base font-bold leading-snug break-words text-slate-800 md:text-lg'>
+                  {round?.question}
+                </p>
               </div>
-              <Separator orientation='vertical' className='h-4' />
-              <div className='text-slate-500'>
-                Points:{' '}
-                <span className='font-bold text-amber-500'>
-                  {viewState.roundPoints}
-                </span>
-              </div>
-              <Separator orientation='vertical' className='h-4' />
-              <div className='text-slate-500'>
-                Strikes:{' '}
-                <span className='font-bold text-red-500'>
-                  {Array.from({ length: 3 }, (_, i) =>
-                    i < viewState.strikes ? '✗ ' : '○ ',
+              <div className='flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-sm'>
+                <div className='text-slate-500'>
+                  Points:{' '}
+                  <span className='text-base font-bold text-amber-500'>
+                    {viewState.roundPoints}
+                  </span>
+                </div>
+                <Separator orientation='vertical' className='hidden h-5 sm:block' />
+                <div className='text-slate-500'>
+                  Strikes:{' '}
+                  <span className='text-base font-bold tracking-wide text-red-500'>
+                    {Array.from({ length: 3 }, (_, i) =>
+                      i < viewState.strikes ? '✗ ' : '○ ',
+                    )}
+                  </span>
+                </div>
+                <Separator orientation='vertical' className='hidden h-5 sm:block' />
+                <div className='shrink-0'>
+                  {viewState.isStealPhase ? (
+                    <Badge className='bg-orange-500 px-2.5 py-1 text-sm font-semibold'>
+                      STEAL - Team {viewState.activeTeam}
+                    </Badge>
+                  ) : viewState.roundStatus === 'ended' ? (
+                    <Badge className='bg-green-500 px-2.5 py-1 text-sm font-semibold'>
+                      ENDED
+                    </Badge>
+                  ) : review ? (
+                    <Badge
+                      variant='outline'
+                      className='px-2.5 py-1 text-sm font-semibold'
+                    >
+                      REVIEW
+                    </Badge>
+                  ) : (
+                    <Badge className='bg-blue-500 px-2.5 py-1 text-sm font-semibold'>
+                      ACTIVE
+                    </Badge>
                   )}
-                </span>
-              </div>
-              <Separator orientation='vertical' className='h-4' />
-              <div>
-                {viewState.isStealPhase ? (
-                  <Badge className='bg-orange-500'>
-                    STEAL - Team {viewState.activeTeam}
-                  </Badge>
-                ) : viewState.roundStatus === 'ended' ? (
-                  <Badge className='bg-green-500'>ENDED</Badge>
-                ) : review ? (
-                  <Badge variant='outline'>REVIEW</Badge>
-                ) : (
-                  <Badge className='bg-blue-500'>ACTIVE</Badge>
-                )}
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
+        </AnimateIn>
 
         {/* Round End Summary */}
         {live && gameState.roundStatus === 'ended' && (
-          <Card className='bg-amber-50 border-amber-200'>
+          <AnimateIn delay={120} className='w-full'>
+          <Card className='border-amber-200/80 bg-amber-50/90 backdrop-blur-sm transition-all duration-300 hover:shadow-md'>
             <CardContent className='p-4 text-center'>
               <div className='text-lg font-bold mb-2 text-slate-800'>
                 {gameState.roundWinner
@@ -535,11 +670,13 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+          </AnimateIn>
         )}
 
         {/* Answers */}
         {showAnswers && (
-          <Card className='bg-white border-slate-200 shadow-sm'>
+          <AnimateIn delay={140} className='w-full'>
+          <Card className='border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md'>
             <CardHeader className='pb-3'>
               <CardTitle className='text-lg text-slate-800'>
                 Answers{review ? ' (read-only)' : ''}
@@ -559,10 +696,10 @@ export default function AdminPage() {
                   return (
                     <div
                       key={index}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      className={`flex items-center gap-3 rounded-lg border p-3 transition-all duration-200 ${
                         isRevealed
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-slate-200 bg-white hover:translate-x-1 hover:border-amber-200 hover:bg-slate-50 hover:shadow-sm'
                       }`}
                     >
                       <div className='w-7 text-center font-bold text-slate-400 text-sm'>
@@ -585,7 +722,7 @@ export default function AdminPage() {
                           <Button
                             size='sm'
                             onClick={() => handleReveal(index)}
-                            className='bg-green-500 hover:bg-green-600 text-white text-xs h-8'
+                            className='h-8 bg-green-500 text-xs text-white transition-all duration-200 hover:scale-105 hover:bg-green-600 active:scale-100'
                           >
                             Reveal
                           </Button>
@@ -597,10 +734,12 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
+          </AnimateIn>
         )}
 
         {/* Controls */}
-        <Card className='bg-white border-slate-200 shadow-sm'>
+        <AnimateIn delay={160} className='w-full'>
+        <Card className='border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md'>
           <CardContent className='p-4 space-y-4'>
             {/* Review past questions */}
             <div className='space-y-2'>
@@ -710,7 +849,8 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
+        </AnimateIn>
       </div>
-    </div>
+    </AppBackground>
   )
 }

@@ -52,6 +52,7 @@ export interface GameState {
 
   finalScoresRevealed: boolean;
   endedWithUnrevealedAnswers: boolean;
+  gameStarted: boolean;
 
   updatedAt: number;
 }
@@ -75,6 +76,7 @@ export function createInitialState(rounds: Round[]): GameState {
     actionHistory: [],
     finalScoresRevealed: false,
     endedWithUnrevealedAnswers: false,
+    gameStarted: false,
     updatedAt: Date.now(),
   };
 }
