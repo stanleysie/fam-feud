@@ -38,6 +38,8 @@ export interface GameState {
   strikes: number;
 
   activeTeam: 1 | 2;
+  team1Name: string;
+  team2Name: string;
   team1Score: number;
   team2Score: number;
 
@@ -65,6 +67,8 @@ export function createInitialState(rounds: Round[]): GameState {
     revealedAnswers: [],
     strikes: 0,
     activeTeam: 1,
+    team1Name: 'Team 1',
+    team2Name: 'Team 2',
     team1Score: 0,
     team2Score: 0,
     isStealPhase: false,

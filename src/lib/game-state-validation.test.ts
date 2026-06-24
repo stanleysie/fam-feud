@@ -91,6 +91,14 @@ describe('validateGameState', () => {
     ).toMatch(/roundWinner/)
   })
 
+  it('accepts legacy schema version 1 without team names', () => {
+    const legacy = { ...validState(), schemaVersion: 1 as const }
+    delete (legacy as { team1Name?: string }).team1Name
+    delete (legacy as { team2Name?: string }).team2Name
+
+    expect(validateGameState(legacy)).toBeNull()
+  })
+
   it('rejects malformed action history', () => {
     expect(
       validateGameState({

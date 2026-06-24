@@ -1,11 +1,12 @@
 import { validateImportData } from '@/lib/import-validation'
+import { validateTeamName } from '@/lib/team-names'
 import {
   Action,
   GameState,
   RoundSnapshot,
 } from '@/types/game'
 
-export const GAME_STATE_SCHEMA_VERSION = 1
+export const GAME_STATE_SCHEMA_VERSION = 2
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -134,11 +135,10 @@ export function validateGameState(data: unknown): string | null {
     return 'Invalid game state: expected an object.'
   }
 
-  if (
-    data.schemaVersion !== undefined &&
-    data.schemaVersion !== GAME_STATE_SCHEMA_VERSION
-  ) {
-    return `Unsupported game state schema version: ${String(data.schemaVersion)}.`
+  if (data.schemaVersion !== undefined) {
+    if (data.schemaVersion !== 1 && data.schemaVersion !== 2) {
+      return `Unsupported game state schema version: ${String(data.schemaVersion)}.`
+    }
   }
 
   const roundsError = validateImportData({ rounds: data.rounds as GameState['rounds'] })
@@ -166,6 +166,17 @@ export function validateGameState(data: unknown): string | null {
   if (!isTeam(data.activeTeam)) {
     return 'activeTeam must be 1 or 2.'
   }
+
+  const team1NameError = validateTeamName(data.team1Name)
+  if (team1NameError && data.team1Name !== undefined) {
+    return `team1Name: ${team1NameError}`
+  }
+
+  const team2NameError = validateTeamName(data.team2Name)
+  if (team2NameError && data.team2Name !== undefined) {
+    return `team2Name: ${team2NameError}`
+  }
+
   if (!isFiniteNumber(data.team1Score) || data.team1Score < 0) {
     return 'team1Score must be a non-negative number.'
   }
@@ -214,6 +225,10 @@ export function validateGameState(data: unknown): string | null {
     revealedAnswers: data.revealedAnswers,
     strikes: data.strikes,
     activeTeam: data.activeTeam,
+    team1Name:
+      typeof data.team1Name === 'string' ? data.team1Name : 'Team 1',
+    team2Name:
+      typeof data.team2Name === 'string' ? data.team2Name : 'Team 2',
     team1Score: data.team1Score,
     team2Score: data.team2Score,
     isStealPhase: data.isStealPhase,

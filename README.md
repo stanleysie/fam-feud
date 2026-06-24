@@ -6,6 +6,7 @@ A Family Feud–style game host for parties and events. Import questions from Ex
 
 - **Excel import & export** — Download a template, fill it in Excel or Google Sheets, and upload; export your question set back to Excel or JSON
 - **Question builder** — Create rounds in the browser without a spreadsheet
+- **Custom team names** — Rename teams on the questions page or in Settings
 - **Two-team gameplay** — Track scores, strikes, active team, and steal rounds
 - **Dual-screen setup** — `/admin` for the host, `/game-view` for the audience display
 - **Live sync** — Game state updates instantly across tabs on the same machine
@@ -40,8 +41,8 @@ npm run test:watch # run tests in watch mode
 
 1. **Start** — Open the home page and click **Start Game** (or press `Enter`).
 2. **Load questions** — On the admin page, download the Excel template or import an `.xlsx` / `.json` file. You can also build questions in the browser.
-3. **Review** — Preview your rounds on the questions page, then start the game.
-4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. Open **Settings** to test sounds before you start.
+3. **Review** — Preview your rounds on the questions page, set team names, then start the game.
+4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. Open **Settings** to test sounds or change team names.
 5. **Display** — Open `/game-view` on a second monitor or projector. It mirrors the board in real time.
 
 ## Question formats
@@ -86,7 +87,34 @@ Each round needs a `question` string and at least one answer with `text` and `po
 | `/`           | Landing page                     |
 | `/admin`      | Host controls & question import  |
 | `/game-view`  | Audience / big-screen display    |
-| `/questions`  | Review rounds before starting    |
+| `/questions`  | Review rounds & set team names before starting |
+
+## Deploy
+
+This app is a static Next.js site and deploys cleanly to [Vercel](https://vercel.com/) (or any host that supports Next.js).
+
+### Vercel (recommended)
+
+1. Push the repo to GitHub.
+2. Import the project in Vercel and select the repository.
+3. Use the default settings — **Framework Preset: Next.js**, build command `npm run build`.
+4. Deploy. Vercel will run CI on each push if GitHub Actions is configured.
+
+### Manual production build
+
+```bash
+npm ci
+npm run build
+npm run start
+```
+
+The app listens on port 3000 by default.
+
+### Notes
+
+- Game state is stored in the browser (`localStorage`) — no database or env vars required.
+- Admin and game-view must be opened on the **same origin** (same URL) for live sync to work.
+- Security headers are configured in `next.config.ts`.
 
 ## Project structure
 

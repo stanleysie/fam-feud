@@ -12,6 +12,7 @@ import {
   isReviewMode,
   revealFinalScores,
 } from '@/lib/game-engine'
+import { getTeamName } from '@/lib/team-names'
 import { useEffect, useRef, useState } from 'react'
 
 export default function GameViewPage() {
@@ -170,7 +171,7 @@ export default function GameViewPage() {
               <div className='absolute right-0 flex animate-card-enter items-center gap-2 rounded-lg border border-orange-300 bg-orange-100 px-4 py-2 shadow-sm'>
                 <div className='h-2.5 w-2.5 animate-pulse rounded-full bg-orange-500' />
                 <span className='text-sm font-bold tracking-wider text-orange-700'>
-                  STEAL - TEAM {viewState!.activeTeam}
+                  STEAL - {getTeamName(gameState, viewState!.activeTeam).toUpperCase()}
                 </span>
               </div>
             )}
@@ -263,7 +264,7 @@ export default function GameViewPage() {
                 Round over
               </div>
               <div className='text-xl font-bold md:text-2xl'>
-                Team {viewState!.roundWinner} wins{' '}
+                {getTeamName(gameState, viewState!.roundWinner!)} wins{' '}
                 <span className='text-amber-100'>
                   {viewState!.roundPoints} points
                 </span>
@@ -297,8 +298,8 @@ export default function GameViewPage() {
                           : 'border-slate-200 bg-slate-50'
                       }`}
                     >
-                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400'>
-                        TEAM 1
+                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400 uppercase'>
+                        {getTeamName(gameState, 1)}
                       </div>
                       <div className='text-5xl font-black text-blue-600 md:text-6xl'>
                         {viewState!.team1Score}
@@ -311,8 +312,8 @@ export default function GameViewPage() {
                           : 'border-slate-200 bg-slate-50'
                       }`}
                     >
-                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400'>
-                        TEAM 2
+                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400 uppercase'>
+                        {getTeamName(gameState, 2)}
                       </div>
                       <div className='text-5xl font-black text-red-600 md:text-6xl'>
                         {viewState!.team2Score}
@@ -323,8 +324,8 @@ export default function GameViewPage() {
                     {viewState!.team1Score === viewState!.team2Score
                       ? "It's a tie!"
                       : viewState!.team1Score > viewState!.team2Score
-                        ? 'Team 1 wins the game!'
-                        : 'Team 2 wins the game!'}
+                        ? `${getTeamName(gameState, 1)} wins the game!`
+                        : `${getTeamName(gameState, 2)} wins the game!`}
                   </div>
                 </>
               ) : (
@@ -359,7 +360,9 @@ export default function GameViewPage() {
                 }`}
               />
               <div>
-                <div className='text-xs font-medium text-slate-400'>TEAM 1</div>
+                <div className='text-xs font-medium uppercase text-slate-400'>
+                  {getTeamName(gameState, 1)}
+                </div>
                 <div className='text-xl font-bold text-white'>
                   {viewState!.team1Score}
                 </div>
@@ -367,7 +370,9 @@ export default function GameViewPage() {
             </div>
             <div className='flex items-center gap-3 transition-transform duration-300 hover:scale-105'>
               <div className='text-right'>
-                <div className='text-xs font-medium text-slate-400'>TEAM 2</div>
+                <div className='text-xs font-medium uppercase text-slate-400'>
+                  {getTeamName(gameState, 2)}
+                </div>
                 <div className='text-xl font-bold text-white'>
                   {viewState!.team2Score}
                 </div>

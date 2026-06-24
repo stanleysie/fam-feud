@@ -4,10 +4,12 @@ import { AppBackground } from '@/components/app-background'
 import { QuestionsAccordion } from '@/components/questions-accordion'
 import { ExportQuestionsButtons } from '@/components/export-questions-button'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
+import { TeamNamesEditor } from '@/components/team-names-editor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { startGame } from '@/lib/game-engine'
+import { updateTeamNames } from '@/lib/team-names'
 import { ArrowRightIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -98,6 +100,21 @@ export default function QuestionsPage() {
             rounds={gameState.rounds}
             currentRoundIndex={gameState.currentRoundIndex}
           />
+
+          <Card className='border-slate-200 bg-white shadow-sm'>
+            <CardHeader>
+              <CardTitle className='text-slate-800'>Team names</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeamNamesEditor
+                team1Name={gameState.team1Name}
+                team2Name={gameState.team2Name}
+                onChange={(team1Name, team2Name) =>
+                  setGameState(updateTeamNames(gameState, team1Name, team2Name))
+                }
+              />
+            </CardContent>
+          </Card>
 
           <div className='flex justify-center pt-2 pb-6'>
             <Button

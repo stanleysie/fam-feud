@@ -1,14 +1,15 @@
 import { Action, GameState, Round, RoundSnapshot } from '@/types/game'
+import { withNormalizedTeamNames } from '@/lib/team-names'
 
 export function normalizeGameState(state: GameState): GameState {
-  return {
+  return withNormalizedTeamNames({
     ...state,
     viewRoundIndex: state.viewRoundIndex ?? state.currentRoundIndex,
     roundSnapshots:
       state.roundSnapshots ?? state.rounds.map(() => null),
     finalScoresRevealed: state.finalScoresRevealed ?? false,
     gameStarted: state.gameStarted ?? false,
-  }
+  })
 }
 
 export function startGame(state: GameState): GameState {

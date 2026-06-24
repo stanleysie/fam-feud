@@ -9,6 +9,7 @@ import {
   canGoNextView,
   canGoPrevView,
 } from '@/lib/game-engine'
+import { getTeamName } from '@/lib/team-names'
 import { GameState, Round } from '@/types/game'
 import {
   ChevronLeftIcon,
@@ -43,6 +44,7 @@ export function AdminTeamScores({
         {([1, 2] as const).map((team) => {
           const active = displayActiveTeam === team
           const score = team === 1 ? team1Score : team2Score
+          const name = getTeamName(gameState, team)
 
           return (
             <button
@@ -56,9 +58,9 @@ export function AdminTeamScores({
               } ${disabled ? 'cursor-default opacity-80' : 'active:scale-[0.98]'}`}
             >
               <div
-                className={`mb-1 text-xs font-semibold tracking-wider ${active ? 'text-blue-100' : 'text-slate-400'}`}
+                className={`mb-1 text-xs font-semibold tracking-wider uppercase ${active ? 'text-blue-100' : 'text-slate-400'}`}
               >
-                TEAM {team}
+                {name}
               </div>
               <div
                 className={`text-3xl font-bold ${active ? 'text-white' : 'text-slate-800'}`}
@@ -122,7 +124,7 @@ export function AdminRoundInfo({
               <div className='shrink-0'>
                 {viewState.isStealPhase ? (
                   <Badge className='bg-orange-500 px-2.5 py-1 text-sm font-semibold'>
-                    STEAL - Team {viewState.activeTeam}
+                    STEAL - {getTeamName(gameState, viewState.activeTeam)}
                   </Badge>
                 ) : viewState.roundStatus === 'ended' ? (
                   <Badge className='bg-green-500 px-2.5 py-1 text-sm font-semibold'>
@@ -165,7 +167,7 @@ export function AdminRoundEndSummary({
         <CardContent className='p-4 text-center'>
           <div className='mb-2 text-lg font-bold text-slate-800'>
             {gameState.roundWinner
-              ? `Team ${gameState.roundWinner} wins ${gameState.roundPoints} points!`
+              ? `${getTeamName(gameState, gameState.roundWinner)} wins ${gameState.roundPoints} points!`
               : 'No points awarded'}
           </div>
           {hasUnrevealedAnswers && (
@@ -179,8 +181,8 @@ export function AdminRoundEndSummary({
             </Button>
           ) : (
             <div className='font-medium text-slate-600'>
-              Game complete — Team 1: {gameState.team1Score} · Team 2:{' '}
-              {gameState.team2Score}
+              Game complete — {getTeamName(gameState, 1)}: {gameState.team1Score}{' '}
+              · {getTeamName(gameState, 2)}: {gameState.team2Score}
             </div>
           )}
         </CardContent>

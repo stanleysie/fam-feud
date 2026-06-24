@@ -173,7 +173,12 @@ export function AdminGameView({
           onOpenChange={setQuestionsOpen}
         />
 
-        <AdminSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+        <AdminSettingsModal
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          gameState={gameState}
+          onUpdateGameState={onUpdateState}
+        />
 
         <AdminTeamScores
           gameState={gameState}
