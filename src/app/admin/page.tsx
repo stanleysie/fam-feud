@@ -4,6 +4,7 @@ import { AnimateIn } from '@/components/animate-in'
 import { AppBackground } from '@/components/app-background'
 import { FeudTitle } from '@/components/feud-title'
 import { QuestionBuilder } from '@/components/question-builder'
+import { AdminSettingsModal } from '@/components/admin-settings-modal'
 import { DownloadExcelTemplateButton } from '@/components/export-questions-button'
 import { QuestionsModal } from '@/components/questions-modal'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
@@ -53,9 +54,9 @@ import {
   ListIcon,
   MonitorIcon,
   RotateCcwIcon,
+  SettingsIcon,
   SkipForwardIcon,
   UploadCloudIcon,
-  Volume2Icon,
   XIcon,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -70,6 +71,7 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [dragActive, setDragActive] = useState(false)
   const [questionsOpen, setQuestionsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   const [importHover, setImportHover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -282,21 +284,31 @@ export default function AdminPage() {
                       Admin panel
                     </span>
                   </div>
-                  <Button
-                    nativeButton={false}
-                    render={
-                      <Link
-                        href='/game-view'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                      />
-                    }
-                    variant='outline'
-                    className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 hover:shadow-sm active:scale-100'
-                  >
-                    <MonitorIcon />
-                    Game View
-                  </Button>
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <Button
+                      onClick={() => setSettingsOpen(true)}
+                      variant='outline'
+                      className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 hover:shadow-sm active:scale-100'
+                    >
+                      <SettingsIcon />
+                      Settings
+                    </Button>
+                    <Button
+                      nativeButton={false}
+                      render={
+                        <Link
+                          href='/game-view'
+                          target='_blank'
+                          rel='noopener noreferrer'
+                        />
+                      }
+                      variant='outline'
+                      className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 hover:shadow-sm active:scale-100'
+                    >
+                      <MonitorIcon />
+                      Game View
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </AnimateIn>
@@ -413,6 +425,8 @@ export default function AdminPage() {
           </div>
         </div>
 
+        <AdminSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+
         <div className='fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm'>
           <div className='mx-auto w-5/6 lg:w-2/3 space-y-2'>
             <div className='flex flex-col gap-2 sm:flex-row'>
@@ -517,6 +531,14 @@ export default function AdminPage() {
                   Questions
                 </Button>
                 <Button
+                  onClick={() => setSettingsOpen(true)}
+                  variant='outline'
+                  className='border-slate-200 transition-all duration-200 hover:scale-105 hover:border-amber-300 active:scale-100'
+                >
+                  <SettingsIcon />
+                  Settings
+                </Button>
+                <Button
                   onClick={() => setResetConfirmOpen(true)}
                   variant='outline'
                   className='border-red-200 text-red-600 transition-all duration-200 hover:scale-105 hover:bg-red-50 active:scale-100'
@@ -561,6 +583,8 @@ export default function AdminPage() {
           open={questionsOpen}
           onOpenChange={setQuestionsOpen}
         />
+
+        <AdminSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
 
         {/* Team Scores - 2 columns */}
         <AnimateIn delay={60} className='w-full'>
@@ -856,7 +880,7 @@ export default function AdminPage() {
                       className='bg-red-500 hover:bg-red-600 text-white min-w-[9rem]'
                     >
                       <XIcon />
-                      {gameState.isStealPhase ? 'Steal wrong' : 'No answer'}
+                      {gameState.isStealPhase ? 'Steal failed' : 'Wrong answer'}
                     </Button>
                     <Button
                       onClick={handleNextQuestion}
@@ -870,41 +894,12 @@ export default function AdminPage() {
                   </div>
                   <p className='text-xs text-slate-500'>
                     {gameState.isStealPhase
-                      ? 'Reveal an answer if the steal is correct, or mark wrong if not.'
-                      : 'Undo only reverses the last reveal or wrong answer.'}
+                      ? 'Reveal an answer if the steal is correct, or press Wrong answer if it is not.'
+                      : 'Press Wrong answer when the active team misses. Undo reverses the last action.'}
                   </p>
                 </div>
               </>
             )}
-
-            <div className='border-t border-slate-100' />
-
-            {/* Sound test */}
-            <div className='space-y-2'>
-              <p className='text-xs font-semibold uppercase tracking-wider text-slate-400'>
-                Sound check
-              </p>
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  onClick={playCorrectSound}
-                  variant='outline'
-                  size='sm'
-                  className='border-green-200 text-green-700 hover:bg-green-50'
-                >
-                  <Volume2Icon />
-                  Correct
-                </Button>
-                <Button
-                  onClick={playWrongSound}
-                  variant='outline'
-                  size='sm'
-                  className='border-red-200 text-red-700 hover:bg-red-50'
-                >
-                  <Volume2Icon />
-                  Wrong
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
         </AnimateIn>
