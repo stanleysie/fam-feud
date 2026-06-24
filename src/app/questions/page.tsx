@@ -2,6 +2,7 @@
 
 import { AppBackground } from '@/components/app-background'
 import { QuestionsAccordion } from '@/components/questions-accordion'
+import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
@@ -32,25 +33,28 @@ export default function QuestionsPage() {
     return (
       <AppBackground variant='subtle' className='text-slate-800'>
         <div className='flex flex-1 items-center justify-center p-6'>
-          <Card className='max-w-md w-full bg-white border-slate-200 shadow-sm'>
-            <CardHeader>
-              <CardTitle className='text-slate-800'>
-                No questions loaded
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <p className='text-slate-600 text-sm'>
-                Import a question set from the admin panel first.
-              </p>
-              <Button
-                nativeButton={false}
-                render={<Link href='/admin' />}
-                className='w-full bg-slate-800 hover:bg-slate-700'
-              >
-                Go to Admin
-              </Button>
-            </CardContent>
-          </Card>
+          <div className='w-full max-w-md space-y-4'>
+            <StorageRecoveryNotice />
+            <Card className='w-full bg-white border-slate-200 shadow-sm'>
+              <CardHeader>
+                <CardTitle className='text-slate-800'>
+                  No questions loaded
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-4'>
+                <p className='text-slate-600 text-sm'>
+                  Import a question set from the admin panel first.
+                </p>
+                <Button
+                  nativeButton={false}
+                  render={<Link href='/admin' />}
+                  className='w-full bg-slate-800 hover:bg-slate-700'
+                >
+                  Go to Admin
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </AppBackground>
     )

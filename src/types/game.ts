@@ -52,6 +52,7 @@ export interface GameState {
   finalScoresRevealed: boolean;
   gameStarted: boolean;
 
+  schemaVersion?: number;
   updatedAt: number;
 }
 

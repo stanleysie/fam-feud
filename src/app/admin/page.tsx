@@ -5,6 +5,7 @@ import { AppBackground } from '@/components/app-background'
 import { FeudTitle } from '@/components/feud-title'
 import { QuestionBuilder } from '@/components/question-builder'
 import { QuestionsModal } from '@/components/questions-modal'
+import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -234,6 +235,7 @@ export default function AdminPage() {
       <AppBackground className='flex flex-col text-slate-800'>
         <div className='flex-1 p-4 pb-44 md:p-6 md:pb-40'>
           <div className='mx-auto w-5/6 lg:w-2/3 space-y-4'>
+            <StorageRecoveryNotice />
             <AnimateIn className='w-full'>
               <Card className='border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-amber-200/60 hover:shadow-md'>
                 <CardContent className='flex flex-wrap items-center justify-between gap-3 p-4'>
