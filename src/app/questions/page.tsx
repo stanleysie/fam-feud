@@ -2,7 +2,7 @@
 
 import { AppBackground } from '@/components/app-background'
 import { QuestionsAccordion } from '@/components/questions-accordion'
-import { ExportQuestionsButton } from '@/components/export-questions-button'
+import { ExportQuestionsButtons } from '@/components/export-questions-button'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -77,9 +77,9 @@ export default function QuestionsPage() {
               </p>
             </div>
             <div className='flex flex-wrap items-center gap-2'>
-              <ExportQuestionsButton
+              <ExportQuestionsButtons
                 rounds={gameState.rounds}
-                className='border-slate-200 bg-white/80'
+                className='[&_button]:border-slate-200 [&_button]:bg-white/80'
               />
               <Button
                 nativeButton={false}

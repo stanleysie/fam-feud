@@ -1,34 +1,64 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import {
+  downloadExcelTemplate,
+  downloadQuestionsExcel,
+} from '@/lib/excel-questions'
 import { downloadQuestionsJson } from '@/lib/export-questions'
 import { Round } from '@/types/game'
-import { DownloadIcon } from 'lucide-react'
+import { DownloadIcon, FileSpreadsheetIcon, FileTextIcon } from 'lucide-react'
 
-type ExportQuestionsButtonProps = {
+type ExportQuestionsButtonsProps = {
   rounds: Round[]
-  filename?: string
-  variant?: 'default' | 'outline' | 'secondary' | 'ghost'
   className?: string
-  showLabel?: boolean
 }
 
-export function ExportQuestionsButton({
+export function ExportQuestionsButtons({
   rounds,
-  filename,
-  variant = 'outline',
   className,
-  showLabel = true,
-}: ExportQuestionsButtonProps) {
+}: ExportQuestionsButtonsProps) {
+  return (
+    <div className={`flex flex-wrap gap-2 ${className ?? ''}`}>
+      <Button
+        type='button'
+        variant='outline'
+        onClick={() => downloadQuestionsExcel(rounds)}
+      >
+        <FileSpreadsheetIcon />
+        Export Excel
+      </Button>
+      <Button
+        type='button'
+        variant='outline'
+        onClick={() => downloadQuestionsJson(rounds)}
+      >
+        <FileTextIcon />
+        Export JSON
+      </Button>
+    </div>
+  )
+}
+
+type DownloadExcelTemplateButtonProps = {
+  className?: string
+}
+
+export function DownloadExcelTemplateButton({
+  className,
+}: DownloadExcelTemplateButtonProps) {
   return (
     <Button
       type='button'
-      variant={variant}
+      variant='outline'
       className={className}
-      onClick={() => downloadQuestionsJson(rounds, filename)}
+      onClick={() => downloadExcelTemplate()}
     >
       <DownloadIcon />
-      {showLabel ? 'Export questions' : null}
+      Download Excel template
     </Button>
   )
 }
+
+// Backwards-compatible alias for older imports.
+export const ExportQuestionsButton = ExportQuestionsButtons

@@ -4,6 +4,7 @@ import { AnimateIn } from '@/components/animate-in'
 import { AppBackground } from '@/components/app-background'
 import { FeudTitle } from '@/components/feud-title'
 import { QuestionBuilder } from '@/components/question-builder'
+import { DownloadExcelTemplateButton } from '@/components/export-questions-button'
 import { QuestionsModal } from '@/components/questions-modal'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +39,11 @@ import {
   undoAction,
 } from '@/lib/game-engine'
 import { SAMPLE_IMPORT_DATA, validateImportData } from '@/lib/import-validation'
+import {
+  isExcelFile,
+  isJsonFile,
+  parseExcelBuffer,
+} from '@/lib/excel-questions'
 import { playCorrectSound, playWrongSound } from '@/lib/sounds'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { createInitialState, GameState, ImportData, Round } from '@/types/game'
@@ -111,6 +117,33 @@ export default function AdminPage() {
   }, [completeImport, jsonInput])
 
   const handleFileImport = (file: File) => {
+    if (isExcelFile(file)) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const buffer = e.target?.result
+        if (!(buffer instanceof ArrayBuffer)) {
+          setError('Could not read the Excel file.')
+          return
+        }
+
+        const result = parseExcelBuffer(buffer)
+        if ('error' in result) {
+          setError(result.error)
+          return
+        }
+
+        setError('')
+        completeImport(result.rounds)
+      }
+      reader.readAsArrayBuffer(file)
+      return
+    }
+
+    if (!isJsonFile(file)) {
+      setError('Please upload an Excel (.xlsx) or JSON (.json) file.')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (e) => {
       const content = e.target?.result as string
@@ -131,11 +164,14 @@ export default function AdminPage() {
     e.preventDefault()
     setDragActive(false)
     const file = e.dataTransfer.files[0]
-    if (file && file.type === 'application/json') {
+    if (!file) return
+
+    if (isExcelFile(file) || isJsonFile(file)) {
       handleFileImport(file)
-    } else {
-      setError('Please drop a .json file')
+      return
     }
+
+    setError('Please drop an Excel (.xlsx) or JSON (.json) file.')
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -272,10 +308,23 @@ export default function AdminPage() {
                     Import questions
                   </CardTitle>
                   <p className='text-sm font-normal text-slate-500'>
-                    Import JSON or build your own questions.
+                    Start with the Excel template, or import JSON if you prefer.
                   </p>
                 </CardHeader>
                 <CardContent className='space-y-4 p-4 md:p-6'>
+                  <div className='flex flex-col gap-3 rounded-xl border border-amber-200/80 bg-amber-50/60 p-4 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='space-y-1'>
+                      <p className='text-sm font-medium text-slate-800'>
+                        Use Excel or Google Sheets
+                      </p>
+                      <p className='text-sm text-slate-600'>
+                        Download the template, add your questions and answers,
+                        then upload the file below.
+                      </p>
+                    </div>
+                    <DownloadExcelTemplateButton className='shrink-0 border-amber-300 bg-white hover:bg-amber-50' />
+                  </div>
+
                   <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
@@ -294,7 +343,7 @@ export default function AdminPage() {
                       }`}
                     />
                     <p className='text-sm font-medium text-slate-700'>
-                      Drop a JSON file here, or{' '}
+                      Drop an Excel or JSON file here, or{' '}
                       <button
                         type='button'
                         onClick={() => fileInputRef.current?.click()}
@@ -304,12 +353,12 @@ export default function AdminPage() {
                       </button>
                     </p>
                     <p className='mt-1 text-xs text-slate-400'>
-                      Supports .json files only
+                      Supports .xlsx and .json files
                     </p>
                     <input
                       ref={fileInputRef}
                       type='file'
-                      accept='.json,application/json'
+                      accept='.xlsx,.xls,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json'
                       onChange={(e) => {
                         const file = e.target.files?.[0]
                         if (file) handleFileImport(file)
@@ -324,7 +373,7 @@ export default function AdminPage() {
                     </div>
                     <div className='relative flex justify-center text-xs'>
                       <span className='bg-white px-3 text-slate-400 uppercase tracking-wider'>
-                        or paste JSON
+                        or paste JSON (advanced)
                       </span>
                     </div>
                   </div>

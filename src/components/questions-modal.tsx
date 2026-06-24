@@ -1,7 +1,7 @@
 'use client'
 
 import { QuestionsAccordion } from '@/components/questions-accordion'
-import { ExportQuestionsButton } from '@/components/export-questions-button'
+import { ExportQuestionsButtons } from '@/components/export-questions-button'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,7 @@ export function QuestionsModal({
           </DialogDescription>
         </DialogHeader>
         <div className='flex justify-end'>
-          <ExportQuestionsButton rounds={rounds} />
+          <ExportQuestionsButtons rounds={rounds} />
         </div>
         <div className='min-h-0 flex-1 overflow-y-auto pr-1'>
           <QuestionsAccordion
