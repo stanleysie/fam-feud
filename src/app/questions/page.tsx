@@ -2,6 +2,7 @@
 
 import { AppBackground } from '@/components/app-background'
 import { QuestionsAccordion } from '@/components/questions-accordion'
+import { ExportQuestionsButton } from '@/components/export-questions-button'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,16 +76,22 @@ export default function QuestionsPage() {
                 below, then start when you are ready.
               </p>
             </div>
-            <Button
-              nativeButton={false}
-              render={
-                <Link href='/game-view' target='_blank' rel='noopener noreferrer' />
-              }
-              variant='outline'
-              className='border-slate-200 bg-white/80'
-            >
-              Open Game View
-            </Button>
+            <div className='flex flex-wrap items-center gap-2'>
+              <ExportQuestionsButton
+                rounds={gameState.rounds}
+                className='border-slate-200 bg-white/80'
+              />
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href='/game-view' target='_blank' rel='noopener noreferrer' />
+                }
+                variant='outline'
+                className='border-slate-200 bg-white/80'
+              >
+                Open Game View
+              </Button>
+            </div>
           </div>
 
           <QuestionsAccordion
