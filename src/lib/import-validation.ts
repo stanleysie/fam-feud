@@ -1,4 +1,4 @@
-import { ImportData } from '@/types/game'
+import { ImportData, Round } from '@/types/game'
 
 export const SAMPLE_IMPORT_DATA: ImportData = {
   rounds: [
@@ -58,4 +58,25 @@ export function validateImportData(data: ImportData): string | null {
     }
   }
   return null
+}
+
+export function parseQuestionsJson(
+  raw: string,
+): { rounds: Round[] } | { error: string } {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object' || parsed === null) {
+      return { error: 'Invalid JSON. Please check the format.' }
+    }
+
+    const data = parsed as ImportData
+    const validationError = validateImportData(data)
+    if (validationError) {
+      return { error: validationError }
+    }
+
+    return { rounds: data.rounds }
+  } catch {
+    return { error: 'Invalid JSON. Please check the format.' }
+  }
 }

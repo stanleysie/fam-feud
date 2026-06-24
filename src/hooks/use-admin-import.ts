@@ -1,12 +1,12 @@
 'use client'
 
-import { SAMPLE_IMPORT_DATA, validateImportData } from '@/lib/import-validation'
+import { parseQuestionsJson, SAMPLE_IMPORT_DATA } from '@/lib/import-validation'
 import {
   isExcelFile,
   isJsonFile,
   parseExcelBuffer,
 } from '@/lib/excel-questions'
-import { createInitialState, GameState, ImportData, Round } from '@/types/game'
+import { createInitialState, GameState, Round } from '@/types/game'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 type UseAdminImportOptions = {
@@ -21,16 +21,6 @@ export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
   const [importHover, setImportHover] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const validateAndImport = useCallback((data: ImportData) => {
-    const validationError = validateImportData(data)
-    if (validationError) {
-      setError(validationError)
-      return false
-    }
-    setError('')
-    return true
-  }, [])
-
   const completeImport = useCallback(
     (rounds: Round[]) => {
       onImport(rounds)
@@ -40,15 +30,14 @@ export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
   )
 
   const handleImport = useCallback(() => {
-    try {
-      const data: ImportData = JSON.parse(jsonInput)
-      if (validateAndImport(data)) {
-        completeImport(data.rounds)
-      }
-    } catch {
-      setError('Invalid JSON. Please check the format.')
+    const result = parseQuestionsJson(jsonInput)
+    if ('error' in result) {
+      setError(result.error)
+      return
     }
-  }, [completeImport, jsonInput, validateAndImport])
+    setError('')
+    completeImport(result.rounds)
+  }, [completeImport, jsonInput])
 
   const handleFileImport = useCallback(
     (file: File) => {
@@ -83,18 +72,17 @@ export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
       reader.onload = (e) => {
         const content = e.target?.result as string
         setJsonInput(content)
-        try {
-          const data: ImportData = JSON.parse(content)
-          if (validateAndImport(data)) {
-            completeImport(data.rounds)
-          }
-        } catch {
-          setError('Invalid JSON file. Please check the format.')
+        const result = parseQuestionsJson(content)
+        if ('error' in result) {
+          setError(result.error)
+          return
         }
+        setError('')
+        completeImport(result.rounds)
       }
       reader.readAsText(file)
     },
-    [completeImport, validateAndImport],
+    [completeImport],
   )
 
   const handleDrop = useCallback(
