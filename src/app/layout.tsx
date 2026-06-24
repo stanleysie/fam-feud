@@ -9,7 +9,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Fam Feud',
-  description: 'Fam Feud game',
+  description:
+    'Host your own game. Import questions, control the board, and play on the big screen.',
 }
 
 export default function RootLayout({
