@@ -1,4 +1,5 @@
 import {
+  JSON_IMPORT_FORMAT_EXAMPLE,
   SAMPLE_IMPORT_DATA,
   parseQuestionsJson,
   validateImportData,
@@ -48,6 +49,32 @@ describe('validateImportData', () => {
         rounds: [{ question: 'Test?', answers: [{ text: 'A', points: NaN }] }],
       }),
     ).toMatch(/points/)
+  })
+})
+
+describe('SAMPLE_IMPORT_DATA', () => {
+  it('provides three demo rounds for try-sample import', () => {
+    expect(SAMPLE_IMPORT_DATA.rounds).toHaveLength(3)
+    expect(validateImportData(SAMPLE_IMPORT_DATA)).toBeNull()
+  })
+})
+
+describe('JSON_IMPORT_FORMAT_EXAMPLE', () => {
+  it('documents a valid import format that parses successfully', () => {
+    expect(validateImportData(JSON.parse(JSON_IMPORT_FORMAT_EXAMPLE))).toBeNull()
+
+    const result = parseQuestionsJson(JSON_IMPORT_FORMAT_EXAMPLE)
+    expect(result).toEqual({
+      rounds: [
+        {
+          question: 'Name something you bring to the beach',
+          answers: [
+            { text: 'Sunscreen', points: 35 },
+            { text: 'Towel', points: 28 },
+          ],
+        },
+      ],
+    })
   })
 })
 
