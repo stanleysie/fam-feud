@@ -1,82 +1,79 @@
 'use client'
 
+import { isExcelFile, isJsonFile, parseExcelBuffer } from '@/lib/excel-questions'
 import { parseQuestionsJson, SAMPLE_IMPORT_DATA } from '@/lib/import-validation'
-import {
-  isExcelFile,
-  isJsonFile,
-  parseExcelBuffer,
-} from '@/lib/excel-questions'
 import { createInitialState, GameState, Round } from '@/types/game'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+
+type FileKind = 'excel' | 'json'
 
 type UseAdminImportOptions = {
-  gameState: GameState | null
   onImport: (rounds: Round[]) => void
 }
 
-export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
-  const [jsonInput, setJsonInput] = useState('')
+export function useAdminImport({ onImport }: UseAdminImportOptions) {
   const [error, setError] = useState('')
-  const [dragActive, setDragActive] = useState(false)
-  const [importHover, setImportHover] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragActive, setDragActive] = useState<FileKind | null>(null)
+  const excelFileInputRef = useRef<HTMLInputElement>(null)
+  const jsonFileInputRef = useRef<HTMLInputElement>(null)
 
   const completeImport = useCallback(
     (rounds: Round[]) => {
       onImport(rounds)
-      setJsonInput('')
     },
     [onImport],
   )
 
-  const handleImport = useCallback(() => {
-    const result = parseQuestionsJson(jsonInput)
-    if ('error' in result) {
-      setError(result.error)
-      return
-    }
-    setError('')
-    completeImport(result.rounds)
-  }, [completeImport, jsonInput])
-
-  const handleFileImport = useCallback(
+  const handleExcelFileImport = useCallback(
     (file: File) => {
-      if (isExcelFile(file)) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const buffer = e.target?.result
-          if (!(buffer instanceof ArrayBuffer)) {
-            setError('Could not read the Excel file.')
-            return
-          }
-
-          const result = parseExcelBuffer(buffer)
-          if ('error' in result) {
-            setError(result.error)
-            return
-          }
-
-          setError('')
-          completeImport(result.rounds)
-        }
-        reader.readAsArrayBuffer(file)
-        return
-      }
-
-      if (!isJsonFile(file)) {
-        setError('Please upload an Excel (.xlsx) or JSON (.json) file.')
+      if (!isExcelFile(file)) {
+        setError('Please upload an Excel (.xlsx) file.')
         return
       }
 
       const reader = new FileReader()
       reader.onload = (e) => {
-        const content = e.target?.result as string
-        setJsonInput(content)
+        const buffer = e.target?.result
+        if (!(buffer instanceof ArrayBuffer)) {
+          setError('Could not read the Excel file.')
+          return
+        }
+
+        const result = parseExcelBuffer(buffer)
+        if ('error' in result) {
+          setError(result.error)
+          return
+        }
+
+        setError('')
+        completeImport(result.rounds)
+      }
+      reader.readAsArrayBuffer(file)
+    },
+    [completeImport],
+  )
+
+  const handleJsonFileImport = useCallback(
+    (file: File) => {
+      if (!isJsonFile(file)) {
+        setError('Please upload a JSON (.json) file.')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target?.result
+        if (typeof content !== 'string') {
+          setError('Could not read the JSON file.')
+          return
+        }
+
         const result = parseQuestionsJson(content)
         if ('error' in result) {
           setError(result.error)
           return
         }
+
         setError('')
         completeImport(result.rounds)
       }
@@ -86,35 +83,39 @@ export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
   )
 
   const handleDrop = useCallback(
-    (e: React.DragEvent) => {
+    (kind: FileKind) => (e: React.DragEvent) => {
       e.preventDefault()
-      setDragActive(false)
+      setDragActive(null)
       const file = e.dataTransfer.files[0]
       if (!file) return
 
-      if (isExcelFile(file) || isJsonFile(file)) {
-        handleFileImport(file)
+      if (kind === 'excel') {
+        handleExcelFileImport(file)
         return
       }
 
-      setError('Please drop an Excel (.xlsx) or JSON (.json) file.')
+      handleJsonFileImport(file)
     },
-    [handleFileImport],
+    [handleExcelFileImport, handleJsonFileImport],
   )
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragActive(true)
-  }, [])
+  const handleDragOver = useCallback(
+    (kind: FileKind) => (e: React.DragEvent) => {
+      e.preventDefault()
+      setDragActive(kind)
+    },
+    [],
+  )
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setDragActive(false)
+    setDragActive(null)
   }, [])
 
-  const handleLoadSample = useCallback(() => {
-    setJsonInput(JSON.stringify(SAMPLE_IMPORT_DATA, null, 2))
-  }, [])
+  const handleTrySample = useCallback(() => {
+    setError('')
+    completeImport(SAMPLE_IMPORT_DATA.rounds)
+  }, [completeImport])
 
   const handleBuilderSubmit = useCallback(
     (rounds: Round[]) => {
@@ -124,32 +125,20 @@ export function useAdminImport({ gameState, onImport }: UseAdminImportOptions) {
     [completeImport],
   )
 
-  useEffect(() => {
-    if (gameState) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        handleImport()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [gameState, handleImport])
+  const clearError = useCallback(() => setError(''), [])
 
   return {
-    jsonInput,
-    setJsonInput,
     error,
+    clearError,
     dragActive,
-    importHover,
-    setImportHover,
-    fileInputRef,
-    handleImport,
-    handleFileImport,
+    excelFileInputRef,
+    jsonFileInputRef,
+    handleExcelFileImport,
+    handleJsonFileImport,
     handleDrop,
     handleDragOver,
     handleDragLeave,
-    handleLoadSample,
+    handleTrySample,
     handleBuilderSubmit,
   }
 }

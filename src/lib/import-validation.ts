@@ -35,6 +35,22 @@ export const SAMPLE_IMPORT_DATA: ImportData = {
   ],
 }
 
+export const JSON_IMPORT_FORMAT_EXAMPLE = JSON.stringify(
+  {
+    rounds: [
+      {
+        question: 'Name something you bring to the beach',
+        answers: [
+          { text: 'Sunscreen', points: 35 },
+          { text: 'Towel', points: 28 },
+        ],
+      },
+    ],
+  },
+  null,
+  2,
+)
+
 export function validateImportData(data: ImportData): string | null {
   if (!data.rounds || !Array.isArray(data.rounds) || data.rounds.length === 0) {
     return 'Invalid format: must have a "rounds" array with at least one round.'

@@ -49,7 +49,7 @@ export function LandingHero() {
                   buttonHover ? 'translate-x-full' : '-translate-x-full'
                 }`}
               />
-              <span className='relative'>Start Game</span>
+              <span className='relative'>Get Started</span>
               <ArrowRightIcon
                 className={`relative size-6 transition-transform duration-300 ${
                   buttonHover ? 'translate-x-1' : ''
@@ -61,7 +61,7 @@ export function LandingHero() {
               <kbd className='rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-xs text-slate-600 shadow-sm'>
                 Enter
               </kbd>{' '}
-              to begin
+              to get started
             </p>
           </div>
         </div>

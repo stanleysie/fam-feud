@@ -7,7 +7,7 @@ import { createImportedGameState } from '@/hooks/use-admin-import'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { Round } from '@/types/game'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect } from 'react'
+import { Suspense, useCallback, useEffect } from 'react'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -21,9 +21,8 @@ export default function AdminPage() {
   const handleImport = useCallback(
     (rounds: Round[]) => {
       setGameState(createImportedGameState(rounds))
-      router.push('/questions')
     },
-    [router, setGameState],
+    [setGameState],
   )
 
   const handleReset = useCallback(() => {
@@ -39,7 +38,25 @@ export default function AdminPage() {
   }
 
   if (!gameState) {
-    return <AdminImportView onImport={handleImport} />
+    return (
+      <Suspense
+        fallback={
+          <AppBackground className='min-h-screen'>
+            <div className='flex-1' />
+          </AppBackground>
+        }
+      >
+        <AdminImportView onImport={handleImport} />
+      </Suspense>
+    )
+  }
+
+  if (!gameState.gameStarted) {
+    return (
+      <AppBackground className='min-h-screen'>
+        <div className='flex-1' />
+      </AppBackground>
+    )
   }
 
   return (
