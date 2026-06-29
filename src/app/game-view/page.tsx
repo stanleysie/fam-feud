@@ -11,6 +11,7 @@ import {
   isLiveView,
   isReviewMode,
 } from '@/lib/game-engine'
+import { getGameViewBanners } from '@/lib/game-view-display'
 import { getTeamName } from '@/lib/team-names'
 import { useEffect, useRef, useState } from 'react'
 
@@ -109,15 +110,15 @@ export default function GameViewPage() {
     )
   }
 
-  const showRoundEndBanner =
-    viewState!.roundStatus === 'ended' &&
-    viewState!.roundWinner &&
-    !(gameComplete && finalScoresRevealed)
-  const showNoPointsBanner =
-    viewState!.roundStatus === 'ended' &&
-    !viewState!.roundWinner &&
-    !(gameComplete && finalScoresRevealed)
-  const showFinalScoresBanner = gameComplete && finalScoresRevealed
+  const banners = getGameViewBanners({
+    roundStatus: viewState!.roundStatus,
+    roundWinner: viewState!.roundWinner,
+    gameComplete,
+    finalScoresRevealed,
+  })
+  const showRoundEndBanner = banners.showRoundEnd
+  const showNoPointsBanner = banners.showNoPoints
+  const showFinalScoresBanner = banners.showFinalScores
 
   // Split answers into columns: left column top-to-bottom, then right column
   const mid = Math.ceil(visibleAnswers.length / 2)

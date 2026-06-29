@@ -1,7 +1,12 @@
 'use client'
 
-import { isExcelFile, isJsonFile, parseExcelBuffer } from '@/lib/excel-questions'
-import { parseQuestionsJson, SAMPLE_IMPORT_DATA } from '@/lib/import-validation'
+import {
+  readExcelImportResult,
+  readJsonImportResult,
+  validateExcelFile,
+  validateJsonFile,
+} from '@/lib/import-files'
+import { SAMPLE_IMPORT_DATA } from '@/lib/import-validation'
 import { createInitialState, GameState, Round } from '@/types/game'
 import { useCallback, useRef, useState } from 'react'
 
@@ -26,21 +31,19 @@ export function useAdminImport({ onImport }: UseAdminImportOptions) {
 
   const handleExcelFileImport = useCallback(
     (file: File) => {
-      if (!isExcelFile(file)) {
-        setError('Please upload an Excel (.xlsx) file.')
+      const validationError = validateExcelFile(file)
+      if (validationError && !validationError.ok) {
+        setError(validationError.error)
         return
       }
 
       const reader = new FileReader()
       reader.onload = (e) => {
         const buffer = e.target?.result
-        if (!(buffer instanceof ArrayBuffer)) {
-          setError('Could not read the Excel file.')
-          return
-        }
-
-        const result = parseExcelBuffer(buffer)
-        if ('error' in result) {
+        const result = readExcelImportResult(
+          buffer instanceof ArrayBuffer ? buffer : null,
+        )
+        if (!result.ok) {
           setError(result.error)
           return
         }
@@ -55,21 +58,19 @@ export function useAdminImport({ onImport }: UseAdminImportOptions) {
 
   const handleJsonFileImport = useCallback(
     (file: File) => {
-      if (!isJsonFile(file)) {
-        setError('Please upload a JSON (.json) file.')
+      const validationError = validateJsonFile(file)
+      if (validationError && !validationError.ok) {
+        setError(validationError.error)
         return
       }
 
       const reader = new FileReader()
       reader.onload = (e) => {
         const content = e.target?.result
-        if (typeof content !== 'string') {
-          setError('Could not read the JSON file.')
-          return
-        }
-
-        const result = parseQuestionsJson(content)
-        if ('error' in result) {
+        const result = readJsonImportResult(
+          typeof content === 'string' ? content : null,
+        )
+        if (!result.ok) {
           setError(result.error)
           return
         }

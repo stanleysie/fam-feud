@@ -41,6 +41,10 @@ npm test           # run unit tests
 npm run test:watch # run tests in watch mode
 ```
 
+## Testing
+
+Unit tests use [Vitest](https://vitest.dev/) (`npm test`). Coverage focuses on pure logic in `src/lib/` and `src/hooks/` — game engine, import/validation, admin routing, game-view banners, and storage (happy-dom stubs for `localStorage`).
+
 ## How to play
 
 1. **Get started** — Open the home page and click **Get Started** (or press `Enter`).
@@ -49,7 +53,7 @@ npm run test:watch # run tests in watch mode
    - **Excel or Google Sheets** — Download the template, fill it in, and upload the `.xlsx` file.
    - **JSON file** — Upload a `.json` file in the documented format (you can export this from the review page).
    - **Build here** — Create questions and answers directly in the browser.
-3. **Review** — Preview your rounds on the questions page, set team names, open **Game View** on your display, then click **Start Game**.
+3. **Review** — Preview your rounds on the questions page, set team names, open **Game View** on your display, then click **Start Game**. Use **Change questions** to go back to setup and replace your question set.
 4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. Open **Settings** to test sounds or change team names.
 5. **Display** — Open `/game-view` on a second monitor or projector. It mirrors the board in real time.
 6. **Finish** — After the last round, the display shows the final round result in a bottom banner (same style as other rounds). Click **Reveal Final Scores** on the admin panel when you are ready to show the overall winner.

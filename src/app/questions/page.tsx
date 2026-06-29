@@ -1,6 +1,7 @@
 'use client'
 
 import { AppBackground } from '@/components/app-background'
+import { ChangeQuestionsDialog } from '@/components/admin/change-questions-dialog'
 import { QuestionsAccordion } from '@/components/questions-accordion'
 import { ExportQuestionsButtons } from '@/components/export-questions-button'
 import { SetupStepIndicator } from '@/components/setup-step-indicator'
@@ -8,16 +9,24 @@ import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { TeamNamesEditor } from '@/components/team-names-editor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CHANGE_QUESTIONS_IMPORT_PATH } from '@/lib/admin-route'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { startGame } from '@/lib/game-engine'
 import { updateTeamNames } from '@/lib/team-names'
-import { ArrowRightIcon, MonitorIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, MonitorIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function QuestionsPage() {
   const router = useRouter()
+  const [changeQuestionsOpen, setChangeQuestionsOpen] = useState(false)
   const { gameState, setGameState, isReady } = useGameStateSync()
+
+  const handleChangeQuestions = () => {
+    setChangeQuestionsOpen(false)
+    router.push(CHANGE_QUESTIONS_IMPORT_PATH)
+  }
 
   const handleStartGame = () => {
     if (!gameState) return
@@ -81,10 +90,21 @@ export default function QuestionsPage() {
                 your questions, set team names, then start the game.
               </p>
             </div>
-            <ExportQuestionsButtons
-              rounds={gameState.rounds}
-              className='[&_button]:border-slate-200 [&_button]:bg-white/80'
-            />
+            <div className='flex flex-wrap items-center gap-2'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setChangeQuestionsOpen(true)}
+                className='border-slate-200 bg-white/80'
+              >
+                <ArrowLeftIcon />
+                Change questions
+              </Button>
+              <ExportQuestionsButtons
+                rounds={gameState.rounds}
+                className='[&_button]:border-slate-200 [&_button]:bg-white/80'
+              />
+            </div>
           </div>
 
           <QuestionsAccordion
@@ -108,6 +128,12 @@ export default function QuestionsPage() {
           </Card>
         </div>
       </div>
+
+      <ChangeQuestionsDialog
+        open={changeQuestionsOpen}
+        onOpenChange={setChangeQuestionsOpen}
+        onConfirm={handleChangeQuestions}
+      />
 
       <div className='fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm'>
         <div className='mx-auto w-11/12 space-y-2 lg:w-2/3'>
