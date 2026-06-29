@@ -410,6 +410,28 @@ describe('game completion', () => {
     const midGame = createTestState([sampleRound, secondRound])
     expect(revealFinalScores(midGame)).toBe(midGame)
   })
+
+  it('keeps finalScoresRevealed false until the host reveals them', () => {
+    const finished = revealAllAnswers(createTestState([sampleRound]))
+
+    expect(isGameComplete(finished)).toBe(true)
+    expect(finished.finalScoresRevealed).toBe(false)
+
+    const revealed = revealFinalScores(finished)
+    expect(revealed.finalScoresRevealed).toBe(true)
+    expect(revealed.team1Score).toBe(finished.team1Score)
+    expect(revealed.roundPoints).toBe(finished.roundPoints)
+    expect(revealed.roundWinner).toBe(finished.roundWinner)
+  })
+
+  it('is not complete until the final round has ended', () => {
+    const lastRoundActive = createTestState([sampleRound], {
+      currentRoundIndex: 0,
+      roundStatus: 'active',
+    })
+
+    expect(isGameComplete(lastRoundActive)).toBe(false)
+  })
 })
 
 describe('getVisibleAnswers', () => {

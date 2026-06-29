@@ -27,6 +27,7 @@ import {
   nextRoundView,
   prevRoundView,
   revealAnswer,
+  revealFinalScores,
   revealRemainingAnswer,
   switchActiveTeam,
   undoAction,
@@ -110,7 +111,7 @@ export function AdminGameView({
 
   return (
     <AppBackground className='p-4 text-slate-800 md:p-6'>
-      <div className='mx-auto w-5/6 min-w-0 space-y-4 pb-4 lg:w-2/3'>
+      <div className='mx-auto w-11/12 min-w-0 space-y-4 pb-4 lg:w-2/3'>
         <AnimateIn className='w-full'>
           <AdminHeader
             review={review}
@@ -231,7 +232,11 @@ export function AdminGameView({
             gameState={gameState}
             hasUnrevealedAnswers={!!hasUnrevealedAnswers}
             canGoNext={canGoNext}
+            finalScoresRevealed={gameState.finalScoresRevealed ?? false}
             onNextQuestion={() => onUpdateState(nextRound(gameState))}
+            onRevealFinalScores={() =>
+              onUpdateState(revealFinalScores(gameState))
+            }
           />
         )}
 

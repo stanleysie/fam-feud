@@ -1,22 +1,32 @@
 'use client'
 
 import { AppBackground } from '@/components/app-background'
+import { ChangeQuestionsDialog } from '@/components/admin/change-questions-dialog'
 import { QuestionsAccordion } from '@/components/questions-accordion'
 import { ExportQuestionsButtons } from '@/components/export-questions-button'
+import { SetupStepIndicator } from '@/components/setup-step-indicator'
 import { StorageRecoveryNotice } from '@/components/storage-recovery-notice'
 import { TeamNamesEditor } from '@/components/team-names-editor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CHANGE_QUESTIONS_IMPORT_PATH } from '@/lib/admin-route'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import { startGame } from '@/lib/game-engine'
 import { updateTeamNames } from '@/lib/team-names'
-import { ArrowRightIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, MonitorIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export default function QuestionsPage() {
   const router = useRouter()
+  const [changeQuestionsOpen, setChangeQuestionsOpen] = useState(false)
   const { gameState, setGameState, isReady } = useGameStateSync()
+
+  const handleChangeQuestions = () => {
+    setChangeQuestionsOpen(false)
+    router.push(CHANGE_QUESTIONS_IMPORT_PATH)
+  }
 
   const handleStartGame = () => {
     if (!gameState) return
@@ -46,14 +56,14 @@ export default function QuestionsPage() {
               </CardHeader>
               <CardContent className='space-y-4'>
                 <p className='text-slate-600 text-sm'>
-                  Import a question set from the admin panel first.
+                  Add your questions from the setup page first.
                 </p>
                 <Button
                   nativeButton={false}
                   render={<Link href='/admin' />}
                   className='w-full bg-slate-800 hover:bg-slate-700'
                 >
-                  Go to Admin
+                  Go to setup
                 </Button>
               </CardContent>
             </Card>
@@ -64,9 +74,11 @@ export default function QuestionsPage() {
   }
 
   return (
-    <AppBackground variant='subtle' className='text-slate-800'>
-      <div className='p-4 md:p-8'>
-        <div className='mx-auto w-5/6 lg:w-2/3 space-y-6'>
+    <AppBackground variant='subtle' className='flex flex-col text-slate-800'>
+      <div className='flex-1 p-4 pb-36 md:p-8 md:pb-32'>
+        <div className='mx-auto w-11/12 space-y-6 lg:w-2/3'>
+          <SetupStepIndicator current='review' />
+
           <div className='flex flex-wrap items-center justify-between gap-3'>
             <div>
               <h1 className='text-2xl md:text-3xl font-bold text-slate-800'>
@@ -75,24 +87,23 @@ export default function QuestionsPage() {
               <p className='text-slate-500 text-sm mt-1'>
                 {gameState.rounds.length} question
                 {gameState.rounds.length === 1 ? '' : 's'} imported — review
-                below, then start when you are ready.
+                your questions, set team names, then start the game.
               </p>
             </div>
             <div className='flex flex-wrap items-center gap-2'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setChangeQuestionsOpen(true)}
+                className='border-slate-200 bg-white/80'
+              >
+                <ArrowLeftIcon />
+                Change questions
+              </Button>
               <ExportQuestionsButtons
                 rounds={gameState.rounds}
                 className='[&_button]:border-slate-200 [&_button]:bg-white/80'
               />
-              <Button
-                nativeButton={false}
-                render={
-                  <Link href='/game-view' target='_blank' rel='noopener noreferrer' />
-                }
-                variant='outline'
-                className='border-slate-200 bg-white/80'
-              >
-                Open Game View
-              </Button>
             </div>
           </div>
 
@@ -115,16 +126,41 @@ export default function QuestionsPage() {
               />
             </CardContent>
           </Card>
+        </div>
+      </div>
 
-          <div className='flex justify-center pt-2 pb-6'>
+      <ChangeQuestionsDialog
+        open={changeQuestionsOpen}
+        onOpenChange={setChangeQuestionsOpen}
+        onConfirm={handleChangeQuestions}
+      />
+
+      <div className='fixed bottom-0 left-0 right-0 z-10 border-t border-slate-200/80 bg-white/95 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] backdrop-blur-sm'>
+        <div className='mx-auto w-11/12 space-y-2 lg:w-2/3'>
+          <div className='flex flex-col gap-2 sm:flex-row'>
+            <Button
+              nativeButton={false}
+              render={
+                <Link href='/game-view' target='_blank' rel='noopener noreferrer' />
+              }
+              variant='outline'
+              className='h-11 border-slate-200 sm:min-w-[10rem]'
+            >
+              <MonitorIcon />
+              Open Game View
+            </Button>
             <Button
               onClick={handleStartGame}
-              className='h-12 gap-2 bg-slate-800 px-8 text-base hover:bg-slate-700'
+              className='h-11 flex-1 gap-2 bg-slate-800 text-base hover:bg-slate-700'
             >
               Start Game
               <ArrowRightIcon className='size-5' />
             </Button>
           </div>
+          <p className='text-center text-xs text-slate-400'>
+            Open Game View on your TV or projector, then start the game to
+            control the board from here.
+          </p>
         </div>
       </div>
     </AppBackground>

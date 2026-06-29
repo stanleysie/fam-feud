@@ -10,14 +10,13 @@ import {
   isGameComplete,
   isLiveView,
   isReviewMode,
-  revealFinalScores,
 } from '@/lib/game-engine'
+import { getGameViewBanners } from '@/lib/game-view-display'
 import { getTeamName } from '@/lib/team-names'
 import { useEffect, useRef, useState } from 'react'
 
 export default function GameViewPage() {
-  const { gameState, setGameState: setGameStateLocal, isReady } =
-    useGameStateSync()
+  const { gameState, isReady } = useGameStateSync()
   const [flashAnswer, setFlashAnswer] = useState<number | null>(null)
   const [pointsPop, setPointsPop] = useState(false)
   const prevPoints = useRef<number | null>(null)
@@ -97,10 +96,6 @@ export default function GameViewPage() {
   const review = isReviewMode(gameState)
   const finalScoresRevealed = gameState.finalScoresRevealed ?? false
 
-  const handleRevealFinalScores = () => {
-    setGameStateLocal(revealFinalScores(gameState))
-  }
-
   if (!round) {
     return (
       <AppBackground variant='subtle' className='min-h-screen'>
@@ -115,14 +110,15 @@ export default function GameViewPage() {
     )
   }
 
-  const showRoundEndBanner =
-    viewState!.roundStatus === 'ended' &&
-    !gameComplete &&
-    viewState!.roundWinner
-  const showNoPointsBanner =
-    viewState!.roundStatus === 'ended' &&
-    !gameComplete &&
-    !viewState!.roundWinner
+  const banners = getGameViewBanners({
+    roundStatus: viewState!.roundStatus,
+    roundWinner: viewState!.roundWinner,
+    gameComplete,
+    finalScoresRevealed,
+  })
+  const showRoundEndBanner = banners.showRoundEnd
+  const showNoPointsBanner = banners.showNoPoints
+  const showFinalScoresBanner = banners.showFinalScores
 
   // Split answers into columns: left column top-to-bottom, then right column
   const mid = Math.ceil(visibleAnswers.length / 2)
@@ -261,7 +257,7 @@ export default function GameViewPage() {
           <div className='animate-banner-slide-up bg-amber-500 px-8 py-4 text-white shadow-lg'>
             <div className='mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center'>
               <div className='text-sm font-semibold uppercase tracking-wider opacity-90'>
-                Round over
+                {gameComplete ? 'Final round' : 'Round over'}
               </div>
               <div className='text-xl font-bold md:text-2xl'>
                 {getTeamName(gameState, viewState!.roundWinner!)} wins{' '}
@@ -275,75 +271,73 @@ export default function GameViewPage() {
 
         {showNoPointsBanner && (
           <div className='animate-banner-slide-up bg-slate-500 px-8 py-4 text-white shadow-lg'>
-            <div className='mx-auto max-w-6xl text-center text-xl font-bold md:text-2xl'>
-              No points awarded
+            <div className='mx-auto max-w-6xl text-center'>
+              <div className='text-sm font-semibold uppercase tracking-wider opacity-90'>
+                {gameComplete ? 'Final round' : 'Round over'}
+              </div>
+              <div className='mt-1 text-xl font-bold md:text-2xl'>
+                No points awarded
+              </div>
             </div>
           </div>
         )}
 
-        {/* Game Complete Summary */}
-        {gameComplete && (
-          <div className='fixed inset-0 z-50 flex animate-landing-fade-up items-center justify-center bg-slate-900/60 backdrop-blur-sm'>
-            <div className='mx-4 max-w-2xl rounded-3xl bg-white p-10 text-center shadow-2xl transition-transform duration-300 hover:scale-[1.01] md:p-14'>
-              {finalScoresRevealed ? (
-                <>
-                  <div className='mb-6 text-sm font-semibold tracking-wider text-slate-400'>
-                    FINAL SCORES
+        {showFinalScoresBanner && (
+          <div className='animate-banner-slide-up bg-slate-900 px-8 py-5 text-white shadow-lg'>
+            <div className='mx-auto max-w-6xl space-y-4 text-center'>
+              <div className='text-sm font-semibold uppercase tracking-wider text-slate-400'>
+                Final scores
+              </div>
+              <div className='flex items-center justify-center gap-8 md:gap-16'>
+                <div
+                  className={`text-center ${
+                    viewState!.team1Score >= viewState!.team2Score
+                      ? 'scale-105'
+                      : ''
+                  }`}
+                >
+                  <div className='text-xs font-medium uppercase text-slate-400'>
+                    {getTeamName(gameState, 1)}
                   </div>
-                  <div className='mb-8 grid grid-cols-2 gap-4 md:gap-6'>
-                    <div
-                      className={`rounded-2xl border-2 p-6 transition-all duration-300 md:p-8 ${
-                        viewState!.team1Score >= viewState!.team2Score
-                          ? 'scale-[1.02] border-blue-400 bg-blue-50 shadow-lg shadow-blue-100'
-                          : 'border-slate-200 bg-slate-50'
-                      }`}
-                    >
-                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400 uppercase'>
-                        {getTeamName(gameState, 1)}
-                      </div>
-                      <div className='text-5xl font-black text-blue-600 md:text-6xl'>
-                        {viewState!.team1Score}
-                      </div>
-                    </div>
-                    <div
-                      className={`rounded-2xl border-2 p-6 transition-all duration-300 md:p-8 ${
-                        viewState!.team2Score >= viewState!.team1Score
-                          ? 'scale-[1.02] border-red-400 bg-red-50 shadow-lg shadow-red-100'
-                          : 'border-slate-200 bg-slate-50'
-                      }`}
-                    >
-                      <div className='mb-2 text-xs font-semibold tracking-wider text-slate-400 uppercase'>
-                        {getTeamName(gameState, 2)}
-                      </div>
-                      <div className='text-5xl font-black text-red-600 md:text-6xl'>
-                        {viewState!.team2Score}
-                      </div>
-                    </div>
-                  </div>
-                  <div className='text-2xl font-bold text-slate-800 md:text-3xl'>
-                    {viewState!.team1Score === viewState!.team2Score
-                      ? "It's a tie!"
-                      : viewState!.team1Score > viewState!.team2Score
-                        ? `${getTeamName(gameState, 1)} wins the game!`
-                        : `${getTeamName(gameState, 2)} wins the game!`}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className='mb-3 text-sm font-semibold tracking-wider text-slate-400'>
-                    GAME COMPLETE
-                  </div>
-                  <div className='mb-8 text-3xl font-bold text-slate-800 md:text-4xl'>
-                    Ready to reveal final scores?
-                  </div>
-                  <button
-                    onClick={handleRevealFinalScores}
-                    className='rounded-xl bg-amber-500 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-amber-600 hover:shadow-amber-500/30 active:scale-100'
+                  <div
+                    className={`text-4xl font-black md:text-5xl ${
+                      viewState!.team1Score >= viewState!.team2Score
+                        ? 'text-blue-400'
+                        : 'text-slate-300'
+                    }`}
                   >
-                    Reveal Final Scores
-                  </button>
-                </>
-              )}
+                    {viewState!.team1Score}
+                  </div>
+                </div>
+                <div className='text-2xl font-light text-slate-600'>·</div>
+                <div
+                  className={`text-center ${
+                    viewState!.team2Score >= viewState!.team1Score
+                      ? 'scale-105'
+                      : ''
+                  }`}
+                >
+                  <div className='text-xs font-medium uppercase text-slate-400'>
+                    {getTeamName(gameState, 2)}
+                  </div>
+                  <div
+                    className={`text-4xl font-black md:text-5xl ${
+                      viewState!.team2Score >= viewState!.team1Score
+                        ? 'text-red-400'
+                        : 'text-slate-300'
+                    }`}
+                  >
+                    {viewState!.team2Score}
+                  </div>
+                </div>
+              </div>
+              <div className='text-lg font-bold md:text-xl'>
+                {viewState!.team1Score === viewState!.team2Score
+                  ? "It's a tie!"
+                  : viewState!.team1Score > viewState!.team2Score
+                    ? `${getTeamName(gameState, 1)} wins the game!`
+                    : `${getTeamName(gameState, 2)} wins the game!`}
+              </div>
             </div>
           </div>
         )}

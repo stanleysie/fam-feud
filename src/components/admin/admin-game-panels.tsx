@@ -152,14 +152,18 @@ type AdminRoundEndSummaryProps = {
   gameState: GameState
   hasUnrevealedAnswers: boolean
   canGoNext: boolean
+  finalScoresRevealed: boolean
   onNextQuestion: () => void
+  onRevealFinalScores: () => void
 }
 
 export function AdminRoundEndSummary({
   gameState,
   hasUnrevealedAnswers,
   canGoNext,
+  finalScoresRevealed,
   onNextQuestion,
+  onRevealFinalScores,
 }: AdminRoundEndSummaryProps) {
   return (
     <AnimateIn delay={120} className='w-full'>
@@ -179,11 +183,23 @@ export function AdminRoundEndSummary({
             <Button onClick={onNextQuestion} className='bg-slate-800 hover:bg-slate-700'>
               Next Question
             </Button>
-          ) : (
-            <div className='font-medium text-slate-600'>
-              Game complete — {getTeamName(gameState, 1)}: {gameState.team1Score}{' '}
-              · {getTeamName(gameState, 2)}: {gameState.team2Score}
+          ) : finalScoresRevealed ? (
+            <div className='space-y-1 font-medium text-slate-600'>
+              <p className='text-sm font-semibold tracking-wider text-slate-400 uppercase'>
+                Final scores
+              </p>
+              <p>
+                {getTeamName(gameState, 1)}: {gameState.team1Score} ·{' '}
+                {getTeamName(gameState, 2)}: {gameState.team2Score}
+              </p>
             </div>
+          ) : (
+            <Button
+              onClick={onRevealFinalScores}
+              className='bg-amber-500 hover:bg-amber-600'
+            >
+              Reveal Final Scores
+            </Button>
           )}
         </CardContent>
       </Card>
