@@ -11,14 +11,16 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: securityHeaders,
-      },
-    ]
-  },
+  ...(process.env.NODE_ENV === 'production' && {
+    async headers() {
+      return [
+        {
+          source: '/(.*)',
+          headers: securityHeaders,
+        },
+      ]
+    },
+  }),
 }
 
 export default nextConfig
