@@ -9,6 +9,7 @@ export function normalizeGameState(state: GameState): GameState {
       state.roundSnapshots ?? state.rounds.map(() => null),
     finalScoresRevealed: state.finalScoresRevealed ?? false,
     gameStarted: state.gameStarted ?? false,
+    gameEnded: state.gameEnded ?? false,
   })
 }
 
@@ -33,11 +34,9 @@ export function hasNextRound(state: GameState): boolean {
 
 export function isGameComplete(state: GameState): boolean {
   const normalized = normalizeGameState(state)
-  return (
-    !hasNextRound(normalized) &&
-    normalized.roundStatus === 'ended' &&
-    isLiveView(normalized)
-  )
+  if (!isLiveView(normalized)) return false
+  if (normalized.gameEnded) return true
+  return !hasNextRound(normalized) && normalized.roundStatus === 'ended'
 }
 
 export function isLiveView(state: GameState): boolean {
@@ -88,6 +87,29 @@ export function revealFinalScores(state: GameState): GameState {
     finalScoresRevealed: true,
     updatedAt: Date.now(),
   }
+}
+
+export function endGame(state: GameState): GameState {
+  const normalized = normalizeGameState(state)
+  if (!isLiveView(normalized)) return normalized
+  if (normalized.gameEnded) return normalized
+
+  // End the game immediately, cutting short any remaining questions. The
+  // current round is marked ended as-is (no points are awarded for a round
+  // that was interrupted) so the only remaining action is to reveal the
+  // final scores based on the scores accumulated so far.
+  const ended = {
+    ...normalized,
+    gameEnded: true,
+    roundStatus: 'ended' as const,
+    isStealPhase: false,
+    updatedAt: Date.now(),
+  }
+
+  const roundSnapshots = [...ended.roundSnapshots]
+  roundSnapshots[ended.currentRoundIndex] = createRoundSnapshot(ended)
+
+  return { ...ended, roundSnapshots }
 }
 
 export function getVisibleAnswers(state: GameState): number[] {
@@ -288,6 +310,7 @@ function resetRoundState(state: GameState, roundIndex: number): GameState {
     actionHistory: [],
     isStealPhase: false,
     finalScoresRevealed: false,
+    gameEnded: false,
     updatedAt: Date.now(),
   }
 }

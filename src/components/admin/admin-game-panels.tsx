@@ -14,6 +14,7 @@ import { GameState, Round } from '@/types/game'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  FlagIcon,
   RotateCcwIcon,
   SkipForwardIcon,
   XIcon,
@@ -296,6 +297,7 @@ type AdminControlPanelProps = {
   onUndo: () => void
   onWrong: () => void
   onSkipQuestion: () => void
+  onEndGame: () => void
 }
 
 export function AdminControlPanel({
@@ -308,6 +310,7 @@ export function AdminControlPanel({
   onUndo,
   onWrong,
   onSkipQuestion,
+  onEndGame,
 }: AdminControlPanelProps) {
   return (
     <AnimateIn delay={160} className='w-full'>
@@ -345,11 +348,23 @@ export function AdminControlPanel({
                   <SkipForwardIcon />
                   Skip question
                 </Button>
+                <Button
+                  onClick={onEndGame}
+                  variant='outline'
+                  className='min-w-[9rem] border-red-300 text-red-700 hover:bg-red-50'
+                >
+                  <FlagIcon />
+                  End game
+                </Button>
               </div>
               <p className='text-xs text-slate-500'>
                 {gameState.isStealPhase
                   ? 'Reveal an answer if the steal is correct, or press Wrong answer if it is not.'
                   : 'Press Wrong answer when the active team misses. Undo reverses the last action.'}
+              </p>
+              <p className='text-xs text-slate-500'>
+                End game finishes now and skips remaining questions — jump
+                straight to the final scores.
               </p>
             </div>
           )}

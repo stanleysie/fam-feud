@@ -91,6 +91,33 @@ describe('validateGameState', () => {
     ).toMatch(/roundWinner/)
   })
 
+  it('accepts an ended round without a winner when the game was ended early', () => {
+    expect(
+      validateGameState({
+        ...validState(),
+        roundStatus: 'ended',
+        roundWinner: null,
+        gameEnded: true,
+      }),
+    ).toBeNull()
+  })
+
+  it('rejects a non-boolean gameEnded flag', () => {
+    expect(
+      validateGameState({
+        ...validState(),
+        gameEnded: 'yes',
+      }),
+    ).toMatch(/gameEnded/)
+  })
+
+  it('accepts a saved state missing the gameEnded flag', () => {
+    const legacy = { ...validState() }
+    delete (legacy as { gameEnded?: boolean }).gameEnded
+
+    expect(validateGameState(legacy)).toBeNull()
+  })
+
   it('accepts legacy schema version 1 without team names', () => {
     const legacy = { ...validState(), schemaVersion: 1 as const }
     delete (legacy as { team1Name?: string }).team1Name

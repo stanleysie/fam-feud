@@ -2,6 +2,7 @@ import { createInitialState, GameState, Round } from '@/types/game'
 import {
   canGoNextView,
   canGoPrevView,
+  endGame,
   getActiveRound,
   getEffectiveState,
   getVisibleAnswers,
@@ -422,6 +423,56 @@ describe('game completion', () => {
     expect(revealed.team1Score).toBe(finished.team1Score)
     expect(revealed.roundPoints).toBe(finished.roundPoints)
     expect(revealed.roundWinner).toBe(finished.roundWinner)
+  })
+
+  it('ends the game early while questions remain', () => {
+    const state = createTestState([sampleRound, secondRound])
+    expect(isGameComplete(state)).toBe(false)
+
+    const ended = endGame(state)
+
+    expect(ended.gameEnded).toBe(true)
+    expect(ended.roundStatus).toBe('ended')
+    expect(ended.isStealPhase).toBe(false)
+    expect(isGameComplete(ended)).toBe(true)
+    // No points are awarded for the interrupted round.
+    expect(ended.team1Score).toBe(0)
+    expect(ended.team2Score).toBe(0)
+    expect(ended.roundSnapshots[0]).not.toBeNull()
+  })
+
+  it('reveals final scores after ending the game early', () => {
+    const state = createTestState([sampleRound, secondRound])
+    const ended = endGame(state)
+    const revealed = revealFinalScores(ended)
+
+    expect(revealed.finalScoresRevealed).toBe(true)
+  })
+
+  it('keeps accumulated team scores when ending the game early', () => {
+    const finishedFirst = revealAllAnswers(
+      createTestState([sampleRound, secondRound]),
+    )
+    const onSecondRound = nextRound(finishedFirst)
+
+    const ended = endGame(onSecondRound)
+
+    expect(ended.gameEnded).toBe(true)
+    expect(ended.team1Score).toBe(90)
+    expect(isGameComplete(ended)).toBe(true)
+  })
+
+  it('does not end the game while reviewing a past round', () => {
+    const reviewing = prevRoundView(
+      nextRound(revealAllAnswers(createTestState([sampleRound, secondRound]))),
+    )
+
+    expect(endGame(reviewing)).toStrictEqual(reviewing)
+  })
+
+  it('is idempotent once the game has ended', () => {
+    const ended = endGame(createTestState([sampleRound, secondRound]))
+    expect(endGame(ended)).toStrictEqual(ended)
   })
 
   it('is not complete until the final round has ended', () => {
