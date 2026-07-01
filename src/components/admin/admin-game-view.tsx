@@ -11,11 +11,13 @@ import {
   AdminRoundInfo,
   AdminTeamScores,
 } from '@/components/admin/admin-game-panels'
+import { EndGameDialog } from '@/components/admin/end-game-dialog'
 import { ResetGameDialog } from '@/components/admin/reset-game-dialog'
 import { QuestionsModal } from '@/components/questions-modal'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
+  endGame,
   getActiveRound,
   getEffectiveState,
   goToLastRound,
@@ -57,6 +59,7 @@ export function AdminGameView({
   const [questionsOpen, setQuestionsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [endGameConfirmOpen, setEndGameConfirmOpen] = useState(false)
 
   const round = getActiveRound(getEffectiveState(gameState))
   const viewState = getEffectiveState(gameState)
@@ -108,6 +111,11 @@ export function AdminGameView({
     onReset()
     setResetConfirmOpen(false)
   }, [onReset])
+
+  const handleEndGame = useCallback(() => {
+    onUpdateState(endGame(gameState))
+    setEndGameConfirmOpen(false)
+  }, [gameState, onUpdateState])
 
   return (
     <AppBackground className='p-4 text-slate-800 md:p-6'>
@@ -165,6 +173,12 @@ export function AdminGameView({
           open={resetConfirmOpen}
           onOpenChange={setResetConfirmOpen}
           onConfirm={handleReset}
+        />
+
+        <EndGameDialog
+          open={endGameConfirmOpen}
+          onOpenChange={setEndGameConfirmOpen}
+          onConfirm={handleEndGame}
         />
 
         <QuestionsModal
@@ -231,7 +245,7 @@ export function AdminGameView({
           <AdminRoundEndSummary
             gameState={gameState}
             hasUnrevealedAnswers={!!hasUnrevealedAnswers}
-            canGoNext={canGoNext}
+            canGoNext={canGoNext && !gameState.gameEnded}
             finalScoresRevealed={gameState.finalScoresRevealed ?? false}
             onNextQuestion={() => onUpdateState(nextRound(gameState))}
             onRevealFinalScores={() =>
@@ -261,6 +275,7 @@ export function AdminGameView({
           onUndo={() => onUpdateState(undoAction(gameState))}
           onWrong={handleWrong}
           onSkipQuestion={() => onUpdateState(nextRound(gameState))}
+          onEndGame={() => setEndGameConfirmOpen(true)}
         />
       </div>
     </AppBackground>

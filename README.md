@@ -56,7 +56,7 @@ Unit tests use [Vitest](https://vitest.dev/) (`npm test`). Coverage focuses on p
 3. **Review** — Preview your rounds on the questions page, set team names, open **Game View** on your display, then click **Start Game**. Use **Change questions** to go back to setup and replace your question set.
 4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. Open **Settings** to test sounds or change team names.
 5. **Display** — Open `/game-view` on a second monitor or projector. It mirrors the board in real time.
-6. **Finish** — After the last round, the display shows the final round result in a bottom banner (same style as other rounds). Click **Reveal Final Scores** on the admin panel when you are ready to show the overall winner.
+6. **Finish** — After the last round, the display shows the final round result in a bottom banner (same style as other rounds). Click **Reveal Final Scores** on the admin panel when you are ready to show the overall winner. Short on time? Use **End game** under **Round actions** to stop immediately and skip any remaining questions — scores are kept as they are, and the only thing left to do is **Reveal Final Scores**.
 
 ## Question formats
 

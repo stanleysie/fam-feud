@@ -109,7 +109,11 @@ function validateInvariants(state: GameState): string | null {
     return 'strikes cannot exceed 3.'
   }
 
-  if (state.roundStatus === 'ended' && state.roundWinner === null) {
+  if (
+    state.roundStatus === 'ended' &&
+    state.roundWinner === null &&
+    !state.gameEnded
+  ) {
     return 'ended rounds must have a roundWinner.'
   }
 
@@ -207,6 +211,9 @@ export function validateGameState(data: unknown): string | null {
   if (typeof data.gameStarted !== 'boolean') {
     return 'gameStarted must be a boolean.'
   }
+  if (data.gameEnded !== undefined && typeof data.gameEnded !== 'boolean') {
+    return 'gameEnded must be a boolean.'
+  }
   if (!isFiniteNumber(data.updatedAt)) {
     return 'updatedAt must be a finite number.'
   }
@@ -238,6 +245,7 @@ export function validateGameState(data: unknown): string | null {
     actionHistory: data.actionHistory as Action[],
     finalScoresRevealed: data.finalScoresRevealed,
     gameStarted: data.gameStarted,
+    gameEnded: typeof data.gameEnded === 'boolean' ? data.gameEnded : false,
     updatedAt: data.updatedAt,
   }
 
