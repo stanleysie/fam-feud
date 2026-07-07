@@ -254,3 +254,16 @@
 .animate-card-enter {
   animation: card-enter 0.5s ease-out both;
 }
+
+@keyframes question-flash-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-question-flash-in {
+  animation: question-flash-in 0.35s ease-out both;
+}

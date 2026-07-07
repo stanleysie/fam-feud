@@ -214,6 +214,12 @@ export function validateGameState(data: unknown): string | null {
   if (data.gameEnded !== undefined && typeof data.gameEnded !== 'boolean') {
     return 'gameEnded must be a boolean.'
   }
+  if (
+    data.questionFlashVisible !== undefined &&
+    typeof data.questionFlashVisible !== 'boolean'
+  ) {
+    return 'questionFlashVisible must be a boolean.'
+  }
   if (!isFiniteNumber(data.updatedAt)) {
     return 'updatedAt must be a finite number.'
   }
@@ -244,6 +250,10 @@ export function validateGameState(data: unknown): string | null {
     roundPoints: data.roundPoints,
     actionHistory: data.actionHistory as Action[],
     finalScoresRevealed: data.finalScoresRevealed,
+    questionFlashVisible:
+      typeof data.questionFlashVisible === 'boolean'
+        ? data.questionFlashVisible
+        : false,
     gameStarted: data.gameStarted,
     gameEnded: typeof data.gameEnded === 'boolean' ? data.gameEnded : false,
     updatedAt: data.updatedAt,

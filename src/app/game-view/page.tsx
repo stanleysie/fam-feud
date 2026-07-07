@@ -2,6 +2,7 @@
 
 import { AnimateIn } from '@/components/animate-in'
 import { AppBackground } from '@/components/app-background'
+import { QuestionFlashOverlay } from '@/components/game-view/question-flash-overlay'
 import { useGameStateSync } from '@/hooks/use-game-state-sync'
 import {
   getActiveRound,
@@ -91,6 +92,11 @@ export default function GameViewPage() {
   }
 
   const round = getActiveRound(viewState!)
+  const liveRound = gameState ? getActiveRound(gameState) : null
+  const showQuestionFlash =
+    !!gameState?.questionFlashVisible &&
+    isLiveView(gameState) &&
+    !!liveRound
   const visibleAnswers = getVisibleAnswers(viewState!)
   const gameComplete = isGameComplete(gameState)
   const review = isReviewMode(gameState)
@@ -127,6 +133,13 @@ export default function GameViewPage() {
 
   return (
     <AppBackground variant='subtle' className='min-h-screen'>
+      {showQuestionFlash && liveRound && gameState && (
+        <QuestionFlashOverlay
+          question={liveRound.question}
+          roundNumber={gameState.currentRoundIndex + 1}
+          totalRounds={gameState.rounds.length}
+        />
+      )}
       {/* Main content — grows to fill viewport */}
       <div className='flex min-h-0 flex-1 flex-col'>
         {/* Top Bar - Strikes + Steal Indicator */}
