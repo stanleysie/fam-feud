@@ -8,6 +8,7 @@ import {
   getVisibleAnswers,
   goToLastRound,
   hasNextRound,
+  hideQuestionFlash,
   isGameComplete,
   isLiveView,
   isReviewMode,
@@ -15,10 +16,12 @@ import {
   nextRound,
   nextRoundView,
   normalizeGameState,
+  overrideRoundWinner,
   prevRoundView,
   revealAnswer,
   revealFinalScores,
   revealRemainingAnswer,
+  showQuestionFlash,
   startGame,
   switchActiveTeam,
   undoAction,
@@ -86,11 +89,12 @@ describe('normalizeGameState', () => {
 })
 
 describe('startGame', () => {
-  it('marks the game as started', () => {
+  it('marks the game as started and shows the question flash', () => {
     const state = createInitialState([sampleRound])
     const started = startGame(state)
 
     expect(started.gameStarted).toBe(true)
+    expect(started.questionFlashVisible).toBe(true)
   })
 
   it('does not restart an already started game', () => {
@@ -302,6 +306,7 @@ describe('round transitions', () => {
     expect(next.strikes).toBe(0)
     expect(next.roundPoints).toBe(0)
     expect(next.team1Score).toBe(90)
+    expect(next.questionFlashVisible).toBe(true)
   })
 
   it('does not advance past the final round', () => {
@@ -482,6 +487,98 @@ describe('game completion', () => {
     })
 
     expect(isGameComplete(lastRoundActive)).toBe(false)
+  })
+})
+
+describe('question flash', () => {
+  it('shows and hides the question flash overlay', () => {
+    const state = createTestState()
+    const shown = showQuestionFlash(state)
+    const hidden = hideQuestionFlash(shown)
+
+    expect(shown.questionFlashVisible).toBe(true)
+    expect(hidden.questionFlashVisible).toBe(false)
+  })
+})
+
+describe('overrideRoundWinner', () => {
+  it('reassigns the winner on the current ended round', () => {
+    const finished = revealAllAnswers(createTestState())
+    expect(finished.team1Score).toBe(90)
+    expect(finished.roundWinner).toBe(1)
+
+    const corrected = overrideRoundWinner(finished, 0, 2)
+
+    expect(corrected.roundWinner).toBe(2)
+    expect(corrected.team1Score).toBe(0)
+    expect(corrected.team2Score).toBe(90)
+    expect(corrected.roundSnapshots[0]?.roundWinner).toBe(2)
+    expect(corrected.roundSnapshots[0]?.team2Score).toBe(90)
+  })
+
+  it('recalculates totals when correcting an earlier round after advancing', () => {
+    const finishedFirst = revealAllAnswers(
+      createTestState([sampleRound, secondRound]),
+    )
+    const onSecondRound = nextRound(finishedFirst)
+    const finishedSecond = revealAllAnswers(onSecondRound)
+
+    expect(finishedSecond.team1Score).toBe(90)
+    expect(finishedSecond.team2Score).toBe(60)
+
+    const corrected = overrideRoundWinner(finishedSecond, 0, 2)
+
+    expect(corrected.team1Score).toBe(0)
+    expect(corrected.team2Score).toBe(150)
+    expect(corrected.roundSnapshots[0]?.team2Score).toBe(90)
+    expect(corrected.roundSnapshots[1]?.team1Score).toBe(0)
+    expect(corrected.roundSnapshots[1]?.team2Score).toBe(150)
+  })
+
+  it('updates review snapshots with corrected cumulative scores', () => {
+    const finishedFirst = revealAllAnswers(
+      createTestState([sampleRound, secondRound]),
+    )
+    const onSecondRound = nextRound(finishedFirst)
+    const corrected = overrideRoundWinner(onSecondRound, 0, 2)
+    const reviewing = prevRoundView(corrected)
+    const effective = getEffectiveState(reviewing)
+
+    expect(effective.roundWinner).toBe(2)
+    expect(effective.team1Score).toBe(0)
+    expect(effective.team2Score).toBe(90)
+  })
+
+  it('is a no-op when the winner is unchanged', () => {
+    const finished = revealAllAnswers(createTestState())
+    const unchanged = overrideRoundWinner(finished, 0, 1)
+
+    expect(unchanged).toStrictEqual(finished)
+  })
+
+  it('does nothing when the round has no points', () => {
+    let state = createTestState()
+    state = markWrong(state)
+    state = markWrong(state)
+    state = markWrong(state)
+    state = markWrong(state)
+
+    expect(state.roundPoints).toBe(0)
+    const updated = overrideRoundWinner(state, 0, 2)
+
+    expect(updated).toStrictEqual(state)
+  })
+
+  it('works in review mode for a completed past round', () => {
+    const onSecondRound = nextRound(
+      revealAllAnswers(createTestState([sampleRound, secondRound])),
+    )
+    const reviewing = prevRoundView(onSecondRound)
+    const corrected = overrideRoundWinner(reviewing, 0, 2)
+
+    expect(corrected.team1Score).toBe(0)
+    expect(corrected.team2Score).toBe(90)
+    expect(corrected.viewRoundIndex).toBe(0)
   })
 })
 

@@ -8,6 +8,7 @@ export function normalizeGameState(state: GameState): GameState {
     roundSnapshots:
       state.roundSnapshots ?? state.rounds.map(() => null),
     finalScoresRevealed: state.finalScoresRevealed ?? false,
+    questionFlashVisible: state.questionFlashVisible ?? false,
     gameStarted: state.gameStarted ?? false,
     gameEnded: state.gameEnded ?? false,
   })
@@ -20,6 +21,23 @@ export function startGame(state: GameState): GameState {
   return {
     ...normalized,
     gameStarted: true,
+    questionFlashVisible: true,
+    updatedAt: Date.now(),
+  }
+}
+
+export function showQuestionFlash(state: GameState): GameState {
+  return {
+    ...normalizeGameState(state),
+    questionFlashVisible: true,
+    updatedAt: Date.now(),
+  }
+}
+
+export function hideQuestionFlash(state: GameState): GameState {
+  return {
+    ...normalizeGameState(state),
+    questionFlashVisible: false,
     updatedAt: Date.now(),
   }
 }
@@ -310,6 +328,7 @@ function resetRoundState(state: GameState, roundIndex: number): GameState {
     actionHistory: [],
     isStealPhase: false,
     finalScoresRevealed: false,
+    questionFlashVisible: true,
     gameEnded: false,
     updatedAt: Date.now(),
   }
@@ -368,4 +387,98 @@ export function switchActiveTeam(state: GameState): GameState {
     activeTeam: normalized.activeTeam === 1 ? 2 : 1,
     updatedAt: Date.now(),
   }
+}
+
+function getBankedScores(
+  roundSnapshots: (RoundSnapshot | null)[],
+  currentRoundIndex: number,
+  roundStatus: 'active' | 'ended',
+): { team1Score: number; team2Score: number } {
+  if (roundStatus === 'ended') {
+    const snap = roundSnapshots[currentRoundIndex]
+    return {
+      team1Score: snap?.team1Score ?? 0,
+      team2Score: snap?.team2Score ?? 0,
+    }
+  }
+
+  if (currentRoundIndex === 0) {
+    return { team1Score: 0, team2Score: 0 }
+  }
+
+  const prevSnap = roundSnapshots[currentRoundIndex - 1]
+  return {
+    team1Score: prevSnap?.team1Score ?? 0,
+    team2Score: prevSnap?.team2Score ?? 0,
+  }
+}
+
+export function rebuildScoresFromSnapshots(state: GameState): GameState {
+  const normalized = normalizeGameState(state)
+  let team1 = 0
+  let team2 = 0
+
+  const roundSnapshots = normalized.roundSnapshots.map((snap) => {
+    if (!snap) return null
+
+    if (snap.roundWinner === 1) {
+      team1 += snap.roundPoints
+    } else if (snap.roundWinner === 2) {
+      team2 += snap.roundPoints
+    }
+
+    return {
+      ...snap,
+      team1Score: team1,
+      team2Score: team2,
+    }
+  })
+
+  const banked = getBankedScores(
+    roundSnapshots,
+    normalized.currentRoundIndex,
+    normalized.roundStatus,
+  )
+
+  return {
+    ...normalized,
+    roundSnapshots,
+    team1Score: banked.team1Score,
+    team2Score: banked.team2Score,
+    updatedAt: Date.now(),
+  }
+}
+
+export function overrideRoundWinner(
+  state: GameState,
+  roundIndex: number,
+  newWinner: 1 | 2,
+): GameState {
+  const normalized = normalizeGameState(state)
+  if (roundIndex > normalized.currentRoundIndex) return normalized
+  if (
+    roundIndex === normalized.currentRoundIndex &&
+    normalized.roundStatus !== 'ended'
+  ) {
+    return normalized
+  }
+
+  const snapshot = normalized.roundSnapshots[roundIndex]
+  if (!snapshot || snapshot.roundStatus !== 'ended') return normalized
+  if (snapshot.roundPoints <= 0 || snapshot.roundWinner === null) return normalized
+  if (snapshot.roundWinner === newWinner) return normalized
+
+  const roundSnapshots = [...normalized.roundSnapshots]
+  roundSnapshots[roundIndex] = { ...snapshot, roundWinner: newWinner }
+
+  const withUpdatedSnapshot = {
+    ...normalized,
+    roundSnapshots,
+    ...(roundIndex === normalized.currentRoundIndex &&
+    normalized.roundStatus === 'ended'
+      ? { roundWinner: newWinner }
+      : {}),
+  }
+
+  return rebuildScoresFromSnapshots(withUpdatedSnapshot)
 }

@@ -12,6 +12,7 @@ import {
   AdminTeamScores,
 } from '@/components/admin/admin-game-panels'
 import { EndGameDialog } from '@/components/admin/end-game-dialog'
+import { OverrideRoundWinnerDialog } from '@/components/admin/override-round-winner-dialog'
 import { ResetGameDialog } from '@/components/admin/reset-game-dialog'
 import { QuestionsModal } from '@/components/questions-modal'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,10 @@ import {
   markWrong,
   nextRound,
   nextRoundView,
+  overrideRoundWinner,
   prevRoundView,
+  hideQuestionFlash,
+  showQuestionFlash,
   revealAnswer,
   revealFinalScores,
   revealRemainingAnswer,
@@ -60,6 +64,9 @@ export function AdminGameView({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   const [endGameConfirmOpen, setEndGameConfirmOpen] = useState(false)
+  const [overrideRoundIndex, setOverrideRoundIndex] = useState<number | null>(
+    null,
+  )
 
   const round = getActiveRound(getEffectiveState(gameState))
   const viewState = getEffectiveState(gameState)
@@ -116,6 +123,31 @@ export function AdminGameView({
     onUpdateState(endGame(gameState))
     setEndGameConfirmOpen(false)
   }, [gameState, onUpdateState])
+
+  const overrideSnapshot =
+    overrideRoundIndex !== null
+      ? gameState.roundSnapshots[overrideRoundIndex]
+      : null
+
+  const handleOverrideConfirm = useCallback(
+    (newWinner: 1 | 2) => {
+      if (overrideRoundIndex === null) return
+      onUpdateState(
+        overrideRoundWinner(gameState, overrideRoundIndex, newWinner),
+      )
+      setOverrideRoundIndex(null)
+    },
+    [gameState, onUpdateState, overrideRoundIndex],
+  )
+
+  const reviewSnapshot = review
+    ? gameState.roundSnapshots[gameState.viewRoundIndex]
+    : null
+  const canOverrideInReview =
+    review &&
+    reviewSnapshot?.roundStatus === 'ended' &&
+    reviewSnapshot.roundPoints > 0 &&
+    reviewSnapshot.roundWinner !== null
 
   return (
     <AppBackground className='p-4 text-slate-800 md:p-6'>
@@ -195,6 +227,20 @@ export function AdminGameView({
           onUpdateGameState={onUpdateState}
         />
 
+        {overrideSnapshot?.roundWinner && (
+          <OverrideRoundWinnerDialog
+            open={overrideRoundIndex !== null}
+            onOpenChange={(open) => {
+              if (!open) setOverrideRoundIndex(null)
+            }}
+            gameState={gameState}
+            roundIndex={overrideRoundIndex!}
+            roundPoints={overrideSnapshot.roundPoints}
+            currentWinner={overrideSnapshot.roundWinner}
+            onConfirm={handleOverrideConfirm}
+          />
+        )}
+
         <AdminTeamScores
           gameState={gameState}
           displayActiveTeam={displayActiveTeam}
@@ -207,9 +253,22 @@ export function AdminGameView({
         {review && (
           <AnimateIn delay={90} className='w-full'>
             <Card className='border-slate-300/80 bg-slate-100/90 backdrop-blur-sm'>
-              <CardContent className='p-3 text-center text-sm text-slate-600'>
-                Reviewing question {gameState.viewRoundIndex + 1} — final state
-                (read-only)
+              <CardContent className='space-y-3 p-3 text-center text-sm text-slate-600'>
+                <p>
+                  Reviewing question {gameState.viewRoundIndex + 1} — final
+                  state (read-only)
+                </p>
+                {canOverrideInReview && (
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      setOverrideRoundIndex(gameState.viewRoundIndex)
+                    }
+                  >
+                    Override round winner
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </AnimateIn>
@@ -239,6 +298,10 @@ export function AdminGameView({
           round={round}
           viewState={viewState}
           review={review}
+          live={live}
+          questionFlashVisible={gameState.questionFlashVisible}
+          onShowQuestion={() => onUpdateState(showQuestionFlash(gameState))}
+          onHideQuestion={() => onUpdateState(hideQuestionFlash(gameState))}
         />
 
         {live && gameState.roundStatus === 'ended' && (
@@ -250,6 +313,9 @@ export function AdminGameView({
             onNextQuestion={() => onUpdateState(nextRound(gameState))}
             onRevealFinalScores={() =>
               onUpdateState(revealFinalScores(gameState))
+            }
+            onChangeWinner={() =>
+              setOverrideRoundIndex(gameState.currentRoundIndex)
             }
           />
         )}

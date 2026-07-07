@@ -15,6 +15,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FlagIcon,
+  MonitorIcon,
   RotateCcwIcon,
   SkipForwardIcon,
   XIcon,
@@ -81,6 +82,10 @@ type AdminRoundInfoProps = {
   round: Round | null
   viewState: GameState
   review: boolean
+  live: boolean
+  questionFlashVisible: boolean
+  onShowQuestion?: () => void
+  onHideQuestion?: () => void
 }
 
 export function AdminRoundInfo({
@@ -88,6 +93,10 @@ export function AdminRoundInfo({
   round,
   viewState,
   review,
+  live,
+  questionFlashVisible,
+  onShowQuestion,
+  onHideQuestion,
 }: AdminRoundInfoProps) {
   return (
     <AnimateIn delay={100} className='w-full'>
@@ -104,6 +113,30 @@ export function AdminRoundInfo({
               <p className='min-w-0 flex-1 text-base font-bold leading-snug break-words text-slate-800 md:text-lg'>
                 {round?.question}
               </p>
+              {live && round && questionFlashVisible && onHideQuestion && (
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={onHideQuestion}
+                  className='shrink-0 border-slate-200'
+                >
+                  <MonitorIcon />
+                  Hide from display
+                </Button>
+              )}
+              {live && round && !questionFlashVisible && onShowQuestion && (
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={onShowQuestion}
+                  className='shrink-0 border-slate-200'
+                >
+                  <MonitorIcon />
+                  Show on display
+                </Button>
+              )}
             </div>
             <div className='flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-sm'>
               <div className='text-slate-500'>
@@ -156,6 +189,7 @@ type AdminRoundEndSummaryProps = {
   finalScoresRevealed: boolean
   onNextQuestion: () => void
   onRevealFinalScores: () => void
+  onChangeWinner?: () => void
 }
 
 export function AdminRoundEndSummary({
@@ -165,7 +199,13 @@ export function AdminRoundEndSummary({
   finalScoresRevealed,
   onNextQuestion,
   onRevealFinalScores,
+  onChangeWinner,
 }: AdminRoundEndSummaryProps) {
+  const canChangeWinner =
+    onChangeWinner &&
+    gameState.roundWinner !== null &&
+    gameState.roundPoints > 0
+
   return (
     <AnimateIn delay={120} className='w-full'>
       <Card className='border-amber-200/80 bg-amber-50/90 backdrop-blur-sm transition-all duration-300 hover:shadow-md'>
@@ -180,28 +220,35 @@ export function AdminRoundEndSummary({
               Reveal remaining answers below before moving on (no extra points).
             </p>
           )}
-          {canGoNext ? (
-            <Button onClick={onNextQuestion} className='bg-slate-800 hover:bg-slate-700'>
-              Next Question
-            </Button>
-          ) : finalScoresRevealed ? (
-            <div className='space-y-1 font-medium text-slate-600'>
-              <p className='text-sm font-semibold tracking-wider text-slate-400 uppercase'>
-                Final scores
-              </p>
-              <p>
-                {getTeamName(gameState, 1)}: {gameState.team1Score} ·{' '}
-                {getTeamName(gameState, 2)}: {gameState.team2Score}
-              </p>
-            </div>
-          ) : (
-            <Button
-              onClick={onRevealFinalScores}
-              className='bg-amber-500 hover:bg-amber-600'
-            >
-              Reveal Final Scores
-            </Button>
-          )}
+          <div className='flex flex-col items-center gap-2'>
+            {canGoNext ? (
+              <Button onClick={onNextQuestion} className='bg-slate-800 hover:bg-slate-700'>
+                Next Question
+              </Button>
+            ) : finalScoresRevealed ? (
+              <div className='space-y-1 font-medium text-slate-600'>
+                <p className='text-sm font-semibold tracking-wider text-slate-400 uppercase'>
+                  Final scores
+                </p>
+                <p>
+                  {getTeamName(gameState, 1)}: {gameState.team1Score} ·{' '}
+                  {getTeamName(gameState, 2)}: {gameState.team2Score}
+                </p>
+              </div>
+            ) : (
+              <Button
+                onClick={onRevealFinalScores}
+                className='bg-amber-500 hover:bg-amber-600'
+              >
+                Reveal Final Scores
+              </Button>
+            )}
+            {canChangeWinner && (
+              <Button variant='outline' onClick={onChangeWinner}>
+                Change winner
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </AnimateIn>

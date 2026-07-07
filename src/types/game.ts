@@ -52,6 +52,7 @@ export interface GameState {
   actionHistory: Action[];
 
   finalScoresRevealed: boolean;
+  questionFlashVisible: boolean;
   gameStarted: boolean;
   gameEnded: boolean;
 
@@ -78,6 +79,7 @@ export function createInitialState(rounds: Round[]): GameState {
     roundPoints: 0,
     actionHistory: [],
     finalScoresRevealed: false,
+    questionFlashVisible: false,
     gameStarted: false,
     gameEnded: false,
     updatedAt: Date.now(),
