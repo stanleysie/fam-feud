@@ -2,6 +2,8 @@
 
 A Family Feud–style game host for parties and events. Import questions from Excel or JSON, run the game from an admin panel on your laptop, and display the board on a big screen — both views stay in sync in the same browser via `localStorage`.
 
+Open source — [stanleysie/fam-feud](https://github.com/stanleysie/fam-feud)
+
 ## Features
 
 - **Excel import & export** — Download a template, fill it in Excel or Google Sheets, and upload; export your question set back to Excel or JSON
@@ -13,6 +15,8 @@ A Family Feud–style game host for parties and events. Import questions from Ex
 - **Two-team gameplay** — Track scores, strikes, active team, and steal rounds
 - **Dual-screen setup** — `/admin` for the host, `/game-view` for the audience display
 - **Live sync** — Game state updates instantly across tabs on the same machine
+- **Question overlay** — Full-screen question flash on the display at round start; show or hide from admin
+- **Score correction** — Reassign a round winner and recalculate totals if points went to the wrong team
 - **Round review** — Browse past rounds while the game is in progress
 - **Dramatic game ending** — Final round score on the display, then reveal overall winner when the host is ready
 - **Sound effects** — Correct and wrong answer feedback (test in Settings)
@@ -54,7 +58,7 @@ Unit tests use [Vitest](https://vitest.dev/) (`npm test`). Coverage focuses on p
    - **JSON file** — Upload a `.json` file in the documented format (you can export this from the review page).
    - **Build here** — Create questions and answers directly in the browser.
 3. **Review** — Preview your rounds on the questions page, set team names, open **Game View** on your display, then click **Start Game**. Use **Change questions** to go back to setup and replace your question set.
-4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. Open **Settings** to test sounds or change team names.
+4. **Host** — Use `/admin` to reveal answers, mark wrong guesses, switch teams, and advance rounds. At each round start, the question appears full-screen on game view — use **Hide from display** / **Show on display** on the question card to control it. If points were awarded to the wrong team, use **Change winner** (after a round ends) or **Override round winner** (when reviewing a past round). Open **Settings** to test sounds or change team names.
 5. **Display** — Open `/game-view` on a second monitor or projector. It mirrors the board in real time.
 6. **Finish** — After the last round, the display shows the final round result in a bottom banner (same style as other rounds). Click **Reveal Final Scores** on the admin panel when you are ready to show the overall winner. Short on time? Use **End game** under **Round actions** to stop immediately and skip any remaining questions — scores are kept as they are, and the only thing left to do is **Reveal Final Scores**.
 
@@ -137,7 +141,8 @@ The app listens on port 3000 by default.
 src/
 ├── app/                        # Next.js routes
 ├── components/
-│   └── admin/                  # Setup UI (import picker, sample banner, game controls)
+│   ├── admin/                  # Setup UI (import picker, sample banner, game controls)
+│   └── game-view/              # Audience display components (question overlay)
 ├── hooks/                      # Shared React hooks (import, game state sync)
 └── lib/                        # Game engine, validation, Excel/JSON I/O
 ```
